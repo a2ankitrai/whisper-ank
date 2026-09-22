@@ -82,7 +82,7 @@ By default, the app launches as a **menu bar app** (`python dictation.py`), appe
 - **🔴 Recording** — actively recording audio
 
 Click the menu bar icon to reveal quick controls:
-- **Toggle Recording** — Start/stop recording without holding the hotkey
+- **Recording Mode** — Switch between push-to-talk and toggle mode
 - **Toggle Audio Feedback** — Enable/disable beeps on record start/stop
 - **Settings…** — Open the native settings window
 
@@ -93,6 +93,7 @@ Clicking **Settings…** opens a native macOS window providing full access to al
 - **Language** — Language code and multilingual/code-mixing support
 - **Translation** — Enable speech-to-English translation; set target language
 - **Grammar** — Grammar correction engine (languagetool, gramformer)
+- **Remove fillers** — Strip filler words (um, uh, like) from output
 - **Hotwords** — Custom dictionary for proper nouns and technical terms
 - **Audio Feedback** — Toggle beeps on record start/stop
 - **Hotkeys** — Customize recording and replay hotkeys
