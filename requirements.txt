@@ -1,0 +1,20 @@
+# Core dependencies
+# faster-whisper >=1.1 is required for the `multilingual` transcribe option.
+faster-whisper>=1.1.0
+sounddevice
+numpy
+pynput
+pyobjc-framework-Quartz
+
+# Grammar correction
+language-tool-python
+
+# Optional: AI-based grammar correction (install separately)
+# pip install -U git+https://github.com/PrithivirajDamodaran/Gramformer.git
+
+# Optional: Offline translation
+# argostranslate
+
+# Testing
+pytest
+pytest-cov

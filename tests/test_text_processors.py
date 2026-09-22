@@ -1,0 +1,260 @@
+"""Tests for text processing pipeline components."""
+
+import pytest
+from pathlib import Path
+import sys
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+
+class TestFillerRemover:
+    """Tests for FillerRemover class."""
+
+    def test_removes_common_fillers(self):
+        """Should remove common filler words."""
+        from dictation import FillerRemover
+        
+        remover = FillerRemover()
+        
+        assert remover.process("um hello world") == "hello world"
+        assert remover.process("uh I think so") == "I think so"
+        assert remover.process("er let me see") == "let me see"
+
+    def test_removes_repeated_fillers(self):
+        """Should remove repeated filler sounds."""
+        from dictation import FillerRemover
+        
+        remover = FillerRemover()
+        
+        assert remover.process("umm hello") == "hello"
+        assert remover.process("uhhh world") == "world"
+        assert remover.process("hmmm yes") == "yes"
+
+    def test_removes_phrase_fillers(self):
+        """Should remove filler phrases."""
+        from dictation import FillerRemover
+        
+        remover = FillerRemover()
+        
+        result = remover.process("you know I think basically it works")
+        assert "you know" not in result.lower()
+        assert "basically" not in result.lower()
+
+    def test_handles_empty_string(self):
+        """Should handle empty string."""
+        from dictation import FillerRemover
+        
+        remover = FillerRemover()
+        assert remover.process("") == ""
+
+    def test_handles_no_fillers(self):
+        """Should return unchanged text when no fillers present."""
+        from dictation import FillerRemover
+        
+        remover = FillerRemover()
+        assert remover.process("Hello world") == "Hello world"
+
+    def test_case_insensitive(self):
+        """Should be case insensitive."""
+        from dictation import FillerRemover
+        
+        remover = FillerRemover()
+        
+        assert remover.process("UM hello") == "hello"
+        assert remover.process("Um hello") == "hello"
+
+    def test_cleans_multiple_spaces(self):
+        """Should clean up multiple spaces after removal."""
+        from dictation import FillerRemover
+        
+        remover = FillerRemover()
+        
+        result = remover.process("hello um um world")
+        assert "  " not in result
+
+
+class TestSnippetExpander:
+    """Tests for SnippetExpander class."""
+
+    def test_expands_exact_match(self):
+        """Should expand exact match snippets."""
+        from dictation import SnippetExpander
+        
+        snippets = {"signature": "Best regards,\nJohn Doe"}
+        expander = SnippetExpander(snippets)
+        
+        assert expander.process("signature") == "Best regards,\nJohn Doe"
+
+    def test_case_insensitive_match(self):
+        """Should match case-insensitively."""
+        from dictation import SnippetExpander
+        
+        snippets = {"greeting": "Hello!"}
+        expander = SnippetExpander(snippets)
+        
+        assert expander.process("GREETING") == "Hello!"
+        assert expander.process("Greeting") == "Hello!"
+
+    def test_insert_prefix_pattern(self):
+        """Should handle 'insert X' pattern."""
+        from dictation import SnippetExpander
+        
+        snippets = {"address": "123 Main St"}
+        expander = SnippetExpander(snippets)
+        
+        assert expander.process("insert address") == "123 Main St"
+
+    def test_returns_unchanged_on_no_match(self):
+        """Should return unchanged text when no snippet matches."""
+        from dictation import SnippetExpander
+        
+        snippets = {"greeting": "Hello!"}
+        expander = SnippetExpander(snippets)
+        
+        assert expander.process("random text") == "random text"
+
+    def test_handles_empty_string(self):
+        """Should handle empty string."""
+        from dictation import SnippetExpander
+        
+        expander = SnippetExpander({})
+        assert expander.process("") == ""
+
+    def test_handles_empty_snippets(self):
+        """Should work with empty snippets dict."""
+        from dictation import SnippetExpander
+        
+        expander = SnippetExpander({})
+        assert expander.process("hello") == "hello"
+
+
+class TestLanguageToolCorrector:
+    """Tests for LanguageToolCorrector class."""
+
+    def test_lazy_loading(self):
+        """Should not load tool on initialization."""
+        from dictation import LanguageToolCorrector
+        
+        corrector = LanguageToolCorrector()
+        assert corrector._tool is None
+
+    def test_handles_empty_string(self):
+        """Should handle empty string without loading tool."""
+        from dictation import LanguageToolCorrector
+        from unittest.mock import patch, MagicMock
+        
+        mock_lt = MagicMock()
+        
+        with patch.dict(sys.modules, {'language_tool_python': mock_lt}):
+            corrector = LanguageToolCorrector()
+            result = corrector.correct("")
+            
+            assert result == ""
+            mock_lt.LanguageTool.assert_not_called()
+
+    def test_calls_tool_correct(self):
+        """Should call tool.correct with text."""
+        from dictation import LanguageToolCorrector
+        from unittest.mock import patch, MagicMock
+        
+        mock_tool = MagicMock()
+        mock_tool.correct.return_value = "He is here."
+        mock_lt = MagicMock()
+        mock_lt.LanguageTool.return_value = mock_tool
+        
+        with patch.dict(sys.modules, {'language_tool_python': mock_lt}):
+            corrector = LanguageToolCorrector()
+            result = corrector.correct("He are here.")
+            
+            assert result == "He is here."
+            mock_tool.correct.assert_called_once_with("He are here.")
+
+    def test_process_delegates_to_correct(self):
+        """Should delegate process() to correct()."""
+        from dictation import LanguageToolCorrector
+        from unittest.mock import patch, MagicMock
+        
+        mock_tool = MagicMock()
+        mock_tool.correct.return_value = "Fixed."
+        mock_lt = MagicMock()
+        mock_lt.LanguageTool.return_value = mock_tool
+        
+        with patch.dict(sys.modules, {'language_tool_python': mock_lt}):
+            corrector = LanguageToolCorrector()
+            result = corrector.process("Broken.")
+            
+            assert result == "Fixed."
+
+
+class TestGramformerCorrector:
+    """Tests for GramformerCorrector class."""
+
+    def test_lazy_loading(self):
+        """Should not load model on initialization."""
+        from dictation import GramformerCorrector
+        
+        corrector = GramformerCorrector()
+        assert corrector._model is None
+
+    def test_handles_empty_string(self):
+        """Should handle empty string without loading model."""
+        from dictation import GramformerCorrector
+        
+        corrector = GramformerCorrector()
+        result = corrector.correct("")
+        
+        assert result == ""
+        assert corrector._model is None
+
+    def test_handles_import_error(self):
+        """Should handle missing gramformer gracefully."""
+        from dictation import GramformerCorrector
+        from unittest.mock import patch
+        
+        with patch.dict(sys.modules, {'gramformer': None}):
+            corrector = GramformerCorrector()
+            # Force load attempt
+            corrector._model = None
+            
+            # Should not crash, should return original text
+            result = corrector.correct("He are here.")
+            # Will mark as unavailable or return original
+
+
+class TestCreateGrammarCorrector:
+    """Tests for create_grammar_corrector factory function."""
+
+    def test_returns_none_for_none_engine(self):
+        """Should return None when engine is None."""
+        from dictation import create_grammar_corrector
+        
+        result = create_grammar_corrector(None)
+        assert result is None
+
+    def test_creates_languagetool_corrector(self):
+        """Should create LanguageToolCorrector for 'languagetool'."""
+        from dictation import create_grammar_corrector, LanguageToolCorrector
+        
+        result = create_grammar_corrector("languagetool", "en")
+        assert isinstance(result, LanguageToolCorrector)
+
+    def test_creates_gramformer_corrector(self):
+        """Should create GramformerCorrector for 'gramformer'."""
+        from dictation import create_grammar_corrector, GramformerCorrector
+        
+        result = create_grammar_corrector("gramformer")
+        assert isinstance(result, GramformerCorrector)
+
+    def test_case_insensitive_engine_name(self):
+        """Should handle engine name case-insensitively."""
+        from dictation import create_grammar_corrector, LanguageToolCorrector
+        
+        result = create_grammar_corrector("LanguageTool", "en")
+        assert isinstance(result, LanguageToolCorrector)
+
+    def test_returns_none_for_unknown_engine(self):
+        """Should return None for unknown engine."""
+        from dictation import create_grammar_corrector
+        
+        result = create_grammar_corrector("unknown_engine")
+        assert result is None

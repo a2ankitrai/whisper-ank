@@ -1,0 +1,14 @@
+.DS_Store
+dictation.log
+dictation.pid
+
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+
+# Test / coverage artefacts
+.pytest_cache/
+.coverage
+htmlcov/
