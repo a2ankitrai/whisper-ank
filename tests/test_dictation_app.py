@@ -28,30 +28,30 @@ def run_worker(app, timeout=2.0):
 class TestDictationAppInit:
     """Test DictationApp initialization."""
 
-    @patch("dictation.AudioFeedback")
-    @patch("dictation.TextTyper")
-    @patch("dictation.Transcriber")
-    @patch("dictation.AudioRecorder")
+    @patch("whisper_dictation.dictation_app.AudioFeedback")
+    @patch("whisper_dictation.dictation_app.TextTyper")
+    @patch("whisper_dictation.dictation_app.Transcriber")
+    @patch("whisper_dictation.dictation_app.AudioRecorder")
     def test_initializes_components(
         self, mock_recorder_cls, mock_transcriber_cls, mock_typer_cls, mock_feedback_cls
     ):
         """Should initialize recorder, transcriber, and typer."""
-        from dictation import DictationApp
+        from whisper_dictation.dictation_app import DictationApp
 
         app = DictationApp(model_size="tiny", language="en")
 
         mock_recorder_cls.assert_called_once()
         mock_typer_cls.assert_called_once()
 
-    @patch("dictation.AudioFeedback")
-    @patch("dictation.TextTyper")
-    @patch("dictation.Transcriber")
-    @patch("dictation.AudioRecorder")
+    @patch("whisper_dictation.dictation_app.AudioFeedback")
+    @patch("whisper_dictation.dictation_app.TextTyper")
+    @patch("whisper_dictation.dictation_app.Transcriber")
+    @patch("whisper_dictation.dictation_app.AudioRecorder")
     def test_default_state(
         self, mock_recorder_cls, mock_transcriber_cls, mock_typer_cls, mock_feedback_cls
     ):
         """Should initialize with correct default state."""
-        from dictation import DictationApp
+        from whisper_dictation.dictation_app import DictationApp
 
         app = DictationApp()
 
@@ -60,15 +60,15 @@ class TestDictationAppInit:
         assert app.pressed_modifiers == set()
         assert app.hotkey == {"cmd", "shift"}
 
-    @patch("dictation.AudioFeedback")
-    @patch("dictation.TextTyper")
-    @patch("dictation.Transcriber")
-    @patch("dictation.AudioRecorder")
+    @patch("whisper_dictation.dictation_app.AudioFeedback")
+    @patch("whisper_dictation.dictation_app.TextTyper")
+    @patch("whisper_dictation.dictation_app.Transcriber")
+    @patch("whisper_dictation.dictation_app.AudioRecorder")
     def test_uses_provided_model_size(
         self, mock_recorder_cls, mock_transcriber_cls, mock_typer_cls, mock_feedback_cls
     ):
         """Should pass model size to transcriber."""
-        from dictation import DictationApp
+        from whisper_dictation.dictation_app import DictationApp
 
         DictationApp(model_size="large-v3")
 
@@ -76,13 +76,13 @@ class TestDictationAppInit:
         call_kwargs = mock_transcriber_cls.call_args[1]
         assert call_kwargs["model_size"] == "large-v3"
 
-    @patch("dictation.AudioFeedback")
-    @patch("dictation.TextTyper")
-    @patch("dictation.Transcriber")
-    @patch("dictation.AudioRecorder")
+    @patch("whisper_dictation.dictation_app.AudioFeedback")
+    @patch("whisper_dictation.dictation_app.TextTyper")
+    @patch("whisper_dictation.dictation_app.Transcriber")
+    @patch("whisper_dictation.dictation_app.AudioRecorder")
     def test_uses_provided_language(self, mock_recorder_cls, mock_transcriber_cls, mock_typer_cls, mock_feedback_cls):
         """Should pass language to transcriber."""
-        from dictation import DictationApp
+        from whisper_dictation.dictation_app import DictationApp
 
         DictationApp(language="de")
 
@@ -94,13 +94,13 @@ class TestDictationAppInit:
 class TestDictationAppKeyToModifier:
     """Test key to modifier conversion."""
 
-    @patch("dictation.AudioFeedback")
-    @patch("dictation.TextTyper")
-    @patch("dictation.Transcriber")
-    @patch("dictation.AudioRecorder")
+    @patch("whisper_dictation.dictation_app.AudioFeedback")
+    @patch("whisper_dictation.dictation_app.TextTyper")
+    @patch("whisper_dictation.dictation_app.Transcriber")
+    @patch("whisper_dictation.dictation_app.AudioRecorder")
     def test_cmd_key_mapping(self, mock_recorder_cls, mock_transcriber_cls, mock_typer_cls, mock_feedback_cls):
         """Should map cmd keys to 'cmd'."""
-        from dictation import DictationApp
+        from whisper_dictation.dictation_app import DictationApp
         from pynput.keyboard import Key
 
         app = DictationApp()
@@ -109,13 +109,13 @@ class TestDictationAppKeyToModifier:
         assert app._key_to_modifier(Key.cmd_l) == "cmd"
         assert app._key_to_modifier(Key.cmd_r) == "cmd"
 
-    @patch("dictation.AudioFeedback")
-    @patch("dictation.TextTyper")
-    @patch("dictation.Transcriber")
-    @patch("dictation.AudioRecorder")
+    @patch("whisper_dictation.dictation_app.AudioFeedback")
+    @patch("whisper_dictation.dictation_app.TextTyper")
+    @patch("whisper_dictation.dictation_app.Transcriber")
+    @patch("whisper_dictation.dictation_app.AudioRecorder")
     def test_shift_key_mapping(self, mock_recorder_cls, mock_transcriber_cls, mock_typer_cls, mock_feedback_cls):
         """Should map shift keys to 'shift'."""
-        from dictation import DictationApp
+        from whisper_dictation.dictation_app import DictationApp
         from pynput.keyboard import Key
 
         app = DictationApp()
@@ -124,13 +124,13 @@ class TestDictationAppKeyToModifier:
         assert app._key_to_modifier(Key.shift_l) == "shift"
         assert app._key_to_modifier(Key.shift_r) == "shift"
 
-    @patch("dictation.AudioFeedback")
-    @patch("dictation.TextTyper")
-    @patch("dictation.Transcriber")
-    @patch("dictation.AudioRecorder")
+    @patch("whisper_dictation.dictation_app.AudioFeedback")
+    @patch("whisper_dictation.dictation_app.TextTyper")
+    @patch("whisper_dictation.dictation_app.Transcriber")
+    @patch("whisper_dictation.dictation_app.AudioRecorder")
     def test_ctrl_key_mapping(self, mock_recorder_cls, mock_transcriber_cls, mock_typer_cls, mock_feedback_cls):
         """Should map ctrl keys to 'ctrl'."""
-        from dictation import DictationApp
+        from whisper_dictation.dictation_app import DictationApp
         from pynput.keyboard import Key
 
         app = DictationApp()
@@ -139,13 +139,13 @@ class TestDictationAppKeyToModifier:
         assert app._key_to_modifier(Key.ctrl_l) == "ctrl"
         assert app._key_to_modifier(Key.ctrl_r) == "ctrl"
 
-    @patch("dictation.AudioFeedback")
-    @patch("dictation.TextTyper")
-    @patch("dictation.Transcriber")
-    @patch("dictation.AudioRecorder")
+    @patch("whisper_dictation.dictation_app.AudioFeedback")
+    @patch("whisper_dictation.dictation_app.TextTyper")
+    @patch("whisper_dictation.dictation_app.Transcriber")
+    @patch("whisper_dictation.dictation_app.AudioRecorder")
     def test_alt_key_mapping(self, mock_recorder_cls, mock_transcriber_cls, mock_typer_cls, mock_feedback_cls):
         """Should map alt keys to 'alt'."""
-        from dictation import DictationApp
+        from whisper_dictation.dictation_app import DictationApp
         from pynput.keyboard import Key
 
         app = DictationApp()
@@ -154,13 +154,13 @@ class TestDictationAppKeyToModifier:
         assert app._key_to_modifier(Key.alt_l) == "alt"
         assert app._key_to_modifier(Key.alt_r) == "alt"
 
-    @patch("dictation.AudioFeedback")
-    @patch("dictation.TextTyper")
-    @patch("dictation.Transcriber")
-    @patch("dictation.AudioRecorder")
+    @patch("whisper_dictation.dictation_app.AudioFeedback")
+    @patch("whisper_dictation.dictation_app.TextTyper")
+    @patch("whisper_dictation.dictation_app.Transcriber")
+    @patch("whisper_dictation.dictation_app.AudioRecorder")
     def test_non_modifier_returns_none(self, mock_recorder_cls, mock_transcriber_cls, mock_typer_cls, mock_feedback_cls):
         """Should return None for non-modifier keys."""
-        from dictation import DictationApp
+        from whisper_dictation.dictation_app import DictationApp
         from pynput.keyboard import Key, KeyCode
 
         app = DictationApp()
@@ -173,13 +173,13 @@ class TestDictationAppKeyToModifier:
 class TestDictationAppOnPress:
     """Test key press handling."""
 
-    @patch("dictation.AudioFeedback")
-    @patch("dictation.TextTyper")
-    @patch("dictation.Transcriber")
-    @patch("dictation.AudioRecorder")
+    @patch("whisper_dictation.dictation_app.AudioFeedback")
+    @patch("whisper_dictation.dictation_app.TextTyper")
+    @patch("whisper_dictation.dictation_app.Transcriber")
+    @patch("whisper_dictation.dictation_app.AudioRecorder")
     def test_adds_modifier_to_pressed_set(self, mock_recorder_cls, mock_transcriber_cls, mock_typer_cls, mock_feedback_cls):
         """Should add pressed modifier to set."""
-        from dictation import DictationApp
+        from whisper_dictation.dictation_app import DictationApp
         from pynput.keyboard import Key
 
         app = DictationApp()
@@ -187,13 +187,13 @@ class TestDictationAppOnPress:
 
         assert "cmd" in app.pressed_modifiers
 
-    @patch("dictation.AudioFeedback")
-    @patch("dictation.TextTyper")
-    @patch("dictation.Transcriber")
-    @patch("dictation.AudioRecorder")
+    @patch("whisper_dictation.dictation_app.AudioFeedback")
+    @patch("whisper_dictation.dictation_app.TextTyper")
+    @patch("whisper_dictation.dictation_app.Transcriber")
+    @patch("whisper_dictation.dictation_app.AudioRecorder")
     def test_starts_recording_when_hotkey_pressed(self, mock_recorder_cls, mock_transcriber_cls, mock_typer_cls, mock_feedback_cls):
         """Should start recording when hotkey combo is pressed."""
-        from dictation import DictationApp
+        from whisper_dictation.dictation_app import DictationApp
         from pynput.keyboard import Key
 
         mock_recorder = MagicMock()
@@ -208,13 +208,13 @@ class TestDictationAppOnPress:
         run_worker(app)
         mock_recorder.start.assert_called_once()
 
-    @patch("dictation.AudioFeedback")
-    @patch("dictation.TextTyper")
-    @patch("dictation.Transcriber")
-    @patch("dictation.AudioRecorder")
+    @patch("whisper_dictation.dictation_app.AudioFeedback")
+    @patch("whisper_dictation.dictation_app.TextTyper")
+    @patch("whisper_dictation.dictation_app.Transcriber")
+    @patch("whisper_dictation.dictation_app.AudioRecorder")
     def test_does_not_restart_if_already_recording(self, mock_recorder_cls, mock_transcriber_cls, mock_typer_cls, mock_feedback_cls):
         """Should not restart recording if already recording."""
-        from dictation import DictationApp
+        from whisper_dictation.dictation_app import DictationApp
         from pynput.keyboard import Key
 
         mock_recorder = MagicMock()
@@ -229,13 +229,13 @@ class TestDictationAppOnPress:
         # Should only start once
         assert mock_recorder.start.call_count == 1
 
-    @patch("dictation.AudioFeedback")
-    @patch("dictation.TextTyper")
-    @patch("dictation.Transcriber")
-    @patch("dictation.AudioRecorder")
+    @patch("whisper_dictation.dictation_app.AudioFeedback")
+    @patch("whisper_dictation.dictation_app.TextTyper")
+    @patch("whisper_dictation.dictation_app.Transcriber")
+    @patch("whisper_dictation.dictation_app.AudioRecorder")
     def test_escape_sets_running_false(self, mock_recorder_cls, mock_transcriber_cls, mock_typer_cls, mock_feedback_cls):
         """Should set running to False when escape pressed."""
-        from dictation import DictationApp
+        from whisper_dictation.dictation_app import DictationApp
         from pynput.keyboard import Key
 
         app = DictationApp()
@@ -244,13 +244,13 @@ class TestDictationAppOnPress:
         assert app.running is False
         assert result is False  # Should return False to stop listener
 
-    @patch("dictation.AudioFeedback")
-    @patch("dictation.TextTyper")
-    @patch("dictation.Transcriber")
-    @patch("dictation.AudioRecorder")
+    @patch("whisper_dictation.dictation_app.AudioFeedback")
+    @patch("whisper_dictation.dictation_app.TextTyper")
+    @patch("whisper_dictation.dictation_app.Transcriber")
+    @patch("whisper_dictation.dictation_app.AudioRecorder")
     def test_partial_hotkey_does_not_start(self, mock_recorder_cls, mock_transcriber_cls, mock_typer_cls, mock_feedback_cls):
         """Should not start recording with only partial hotkey."""
-        from dictation import DictationApp
+        from whisper_dictation.dictation_app import DictationApp
         from pynput.keyboard import Key
 
         mock_recorder = MagicMock()
@@ -266,13 +266,13 @@ class TestDictationAppOnPress:
 class TestDictationAppOnRelease:
     """Test key release handling."""
 
-    @patch("dictation.AudioFeedback")
-    @patch("dictation.TextTyper")
-    @patch("dictation.Transcriber")
-    @patch("dictation.AudioRecorder")
+    @patch("whisper_dictation.dictation_app.AudioFeedback")
+    @patch("whisper_dictation.dictation_app.TextTyper")
+    @patch("whisper_dictation.dictation_app.Transcriber")
+    @patch("whisper_dictation.dictation_app.AudioRecorder")
     def test_removes_modifier_from_pressed_set(self, mock_recorder_cls, mock_transcriber_cls, mock_typer_cls, mock_feedback_cls):
         """Should remove released modifier from set."""
-        from dictation import DictationApp
+        from whisper_dictation.dictation_app import DictationApp
         from pynput.keyboard import Key
 
         app = DictationApp()
@@ -282,13 +282,13 @@ class TestDictationAppOnRelease:
         assert "cmd" not in app.pressed_modifiers
         assert "shift" in app.pressed_modifiers
 
-    @patch("dictation.AudioFeedback")
-    @patch("dictation.TextTyper")
-    @patch("dictation.Transcriber")
-    @patch("dictation.AudioRecorder")
+    @patch("whisper_dictation.dictation_app.AudioFeedback")
+    @patch("whisper_dictation.dictation_app.TextTyper")
+    @patch("whisper_dictation.dictation_app.Transcriber")
+    @patch("whisper_dictation.dictation_app.AudioRecorder")
     def test_triggers_processing_when_hotkey_released(self, mock_recorder_cls, mock_transcriber_cls, mock_typer_cls, mock_feedback_cls):
         """Should trigger processing when hotkey released while recording."""
-        from dictation import DictationApp
+        from whisper_dictation.dictation_app import DictationApp
         from pynput.keyboard import Key
 
         app = DictationApp()
@@ -303,13 +303,13 @@ class TestDictationAppOnRelease:
             # is_recording should be False
             assert app.is_recording is False
 
-    @patch("dictation.AudioFeedback")
-    @patch("dictation.TextTyper")
-    @patch("dictation.Transcriber")
-    @patch("dictation.AudioRecorder")
+    @patch("whisper_dictation.dictation_app.AudioFeedback")
+    @patch("whisper_dictation.dictation_app.TextTyper")
+    @patch("whisper_dictation.dictation_app.Transcriber")
+    @patch("whisper_dictation.dictation_app.AudioRecorder")
     def test_does_not_process_if_not_recording(self, mock_recorder_cls, mock_transcriber_cls, mock_typer_cls, mock_feedback_cls):
         """Should not process if not recording."""
-        from dictation import DictationApp
+        from whisper_dictation.dictation_app import DictationApp
         from pynput.keyboard import Key
 
         app = DictationApp()
@@ -328,13 +328,13 @@ class TestDictationAppOnRelease:
 class TestDictationAppProcessRecording:
     """Test recording processing."""
 
-    @patch("dictation.AudioFeedback")
-    @patch("dictation.TextTyper")
-    @patch("dictation.Transcriber")
-    @patch("dictation.AudioRecorder")
+    @patch("whisper_dictation.dictation_app.AudioFeedback")
+    @patch("whisper_dictation.dictation_app.TextTyper")
+    @patch("whisper_dictation.dictation_app.Transcriber")
+    @patch("whisper_dictation.dictation_app.AudioRecorder")
     def test_handles_no_audio(self, mock_recorder_cls, mock_transcriber_cls, mock_typer_cls, mock_feedback_cls):
         """Should handle case where no audio was recorded."""
-        from dictation import DictationApp
+        from whisper_dictation.dictation_app import DictationApp
 
         mock_recorder = MagicMock()
         mock_recorder.stop.return_value = None
@@ -346,13 +346,13 @@ class TestDictationAppProcessRecording:
         # Should not crash, transcriber should not be called
         mock_transcriber_cls.return_value.transcribe.assert_not_called()
 
-    @patch("dictation.AudioFeedback")
-    @patch("dictation.TextTyper")
-    @patch("dictation.Transcriber")
-    @patch("dictation.AudioRecorder")
+    @patch("whisper_dictation.dictation_app.AudioFeedback")
+    @patch("whisper_dictation.dictation_app.TextTyper")
+    @patch("whisper_dictation.dictation_app.Transcriber")
+    @patch("whisper_dictation.dictation_app.AudioRecorder")
     def test_handles_short_audio(self, mock_recorder_cls, mock_transcriber_cls, mock_typer_cls, mock_feedback_cls):
         """Should skip very short recordings."""
-        from dictation import DictationApp
+        from whisper_dictation.dictation_app import DictationApp
 
         mock_recorder = MagicMock()
         # Less than 0.2 seconds at 16kHz (3200 samples)
@@ -365,13 +365,13 @@ class TestDictationAppProcessRecording:
         # Should not transcribe
         mock_transcriber_cls.return_value.transcribe.assert_not_called()
 
-    @patch("dictation.AudioFeedback")
-    @patch("dictation.TextTyper")
-    @patch("dictation.Transcriber")
-    @patch("dictation.AudioRecorder")
+    @patch("whisper_dictation.dictation_app.AudioFeedback")
+    @patch("whisper_dictation.dictation_app.TextTyper")
+    @patch("whisper_dictation.dictation_app.Transcriber")
+    @patch("whisper_dictation.dictation_app.AudioRecorder")
     def test_transcribes_and_types_valid_audio(self, mock_recorder_cls, mock_transcriber_cls, mock_typer_cls, mock_feedback_cls):
         """Should transcribe and type valid audio."""
-        from dictation import DictationApp
+        from whisper_dictation.dictation_app import DictationApp
 
         mock_recorder = MagicMock()
         mock_recorder.stop.return_value = np.zeros(16000, dtype=np.float32)  # 1 second
@@ -392,13 +392,13 @@ class TestDictationAppProcessRecording:
         # Should type result with trailing space
         mock_typer.type_text.assert_called_once_with("Hello world ")
 
-    @patch("dictation.AudioFeedback")
-    @patch("dictation.TextTyper")
-    @patch("dictation.Transcriber")
-    @patch("dictation.AudioRecorder")
+    @patch("whisper_dictation.dictation_app.AudioFeedback")
+    @patch("whisper_dictation.dictation_app.TextTyper")
+    @patch("whisper_dictation.dictation_app.Transcriber")
+    @patch("whisper_dictation.dictation_app.AudioRecorder")
     def test_handles_empty_transcription(self, mock_recorder_cls, mock_transcriber_cls, mock_typer_cls, mock_feedback_cls):
         """Should handle empty transcription result."""
-        from dictation import DictationApp
+        from whisper_dictation.dictation_app import DictationApp
 
         mock_recorder = MagicMock()
         mock_recorder.stop.return_value = np.zeros(16000, dtype=np.float32)
@@ -417,13 +417,13 @@ class TestDictationAppProcessRecording:
         # Should not type anything
         mock_typer.type_text.assert_not_called()
 
-    @patch("dictation.AudioFeedback")
-    @patch("dictation.TextTyper")
-    @patch("dictation.Transcriber")
-    @patch("dictation.AudioRecorder")
+    @patch("whisper_dictation.dictation_app.AudioFeedback")
+    @patch("whisper_dictation.dictation_app.TextTyper")
+    @patch("whisper_dictation.dictation_app.Transcriber")
+    @patch("whisper_dictation.dictation_app.AudioRecorder")
     def test_handles_transcription_error(self, mock_recorder_cls, mock_transcriber_cls, mock_typer_cls, mock_feedback_cls):
         """Should handle transcription errors gracefully."""
-        from dictation import DictationApp
+        from whisper_dictation.dictation_app import DictationApp
 
         mock_recorder = MagicMock()
         mock_recorder.stop.return_value = np.zeros(16000, dtype=np.float32)
@@ -443,13 +443,13 @@ class TestDictationAppProcessRecording:
         # Should not type anything
         mock_typer.type_text.assert_not_called()
 
-    @patch("dictation.AudioFeedback")
-    @patch("dictation.TextTyper")
-    @patch("dictation.Transcriber")
-    @patch("dictation.AudioRecorder")
+    @patch("whisper_dictation.dictation_app.AudioFeedback")
+    @patch("whisper_dictation.dictation_app.TextTyper")
+    @patch("whisper_dictation.dictation_app.Transcriber")
+    @patch("whisper_dictation.dictation_app.AudioRecorder")
     def test_cleans_up_temp_file(self, mock_recorder_cls, mock_transcriber_cls, mock_typer_cls, mock_feedback_cls):
         """Should clean up temporary WAV file."""
-        from dictation import DictationApp
+        from whisper_dictation.dictation_app import DictationApp
 
         mock_recorder = MagicMock()
         mock_recorder.stop.return_value = np.zeros(16000, dtype=np.float32)
@@ -479,16 +479,237 @@ class TestDictationAppProcessRecording:
             assert not f.exists()
 
 
+class TestDictationAppToggleMode:
+    """Test toggle recording mode (press once to start, press again to stop)."""
+
+    @patch("whisper_dictation.dictation_app.AudioFeedback")
+    @patch("whisper_dictation.dictation_app.TextTyper")
+    @patch("whisper_dictation.dictation_app.Transcriber")
+    @patch("whisper_dictation.dictation_app.AudioRecorder")
+    def test_first_full_press_starts_recording(
+        self, mock_recorder_cls, mock_transcriber_cls, mock_typer_cls, mock_feedback_cls
+    ):
+        """Pressing the full combo once should start recording."""
+        from whisper_dictation.config import DictationConfig
+        from whisper_dictation.dictation_app import DictationApp
+        from pynput.keyboard import Key
+
+        app = DictationApp(config=DictationConfig(recording_mode="toggle"))
+        app._on_press(Key.cmd)
+        app._on_press(Key.shift)
+
+        assert app.is_recording is True
+
+    @patch("whisper_dictation.dictation_app.AudioFeedback")
+    @patch("whisper_dictation.dictation_app.TextTyper")
+    @patch("whisper_dictation.dictation_app.Transcriber")
+    @patch("whisper_dictation.dictation_app.AudioRecorder")
+    def test_release_does_not_stop_recording(
+        self, mock_recorder_cls, mock_transcriber_cls, mock_typer_cls, mock_feedback_cls
+    ):
+        """Releasing keys in toggle mode must not stop the recording."""
+        from whisper_dictation.config import DictationConfig
+        from whisper_dictation.dictation_app import DictationApp
+        from pynput.keyboard import Key
+
+        app = DictationApp(config=DictationConfig(recording_mode="toggle"))
+        app._on_press(Key.cmd)
+        app._on_press(Key.shift)
+        app._on_release(Key.cmd)
+        app._on_release(Key.shift)
+
+        assert app.is_recording is True
+
+    @patch("whisper_dictation.dictation_app.AudioFeedback")
+    @patch("whisper_dictation.dictation_app.TextTyper")
+    @patch("whisper_dictation.dictation_app.Transcriber")
+    @patch("whisper_dictation.dictation_app.AudioRecorder")
+    def test_second_full_press_stops_recording(
+        self, mock_recorder_cls, mock_transcriber_cls, mock_typer_cls, mock_feedback_cls
+    ):
+        """Pressing the full combo again should stop the recording."""
+        from whisper_dictation.config import DictationConfig
+        from whisper_dictation.dictation_app import DictationApp
+        from pynput.keyboard import Key
+
+        app = DictationApp(config=DictationConfig(recording_mode="toggle"))
+        app._on_press(Key.cmd)
+        app._on_press(Key.shift)
+        app._on_release(Key.cmd)
+        app._on_release(Key.shift)
+
+        app._on_press(Key.cmd)
+        app._on_press(Key.shift)
+
+        assert app.is_recording is False
+
+    @patch("whisper_dictation.dictation_app.AudioFeedback")
+    @patch("whisper_dictation.dictation_app.TextTyper")
+    @patch("whisper_dictation.dictation_app.Transcriber")
+    @patch("whisper_dictation.dictation_app.AudioRecorder")
+    def test_holding_combo_does_not_retrigger(
+        self, mock_recorder_cls, mock_transcriber_cls, mock_typer_cls, mock_feedback_cls
+    ):
+        """A repeated press of an already-held modifier must not re-toggle."""
+        from whisper_dictation.config import DictationConfig
+        from whisper_dictation.dictation_app import DictationApp
+        from pynput.keyboard import Key
+
+        app = DictationApp(config=DictationConfig(recording_mode="toggle"))
+        app._on_press(Key.cmd)
+        app._on_press(Key.shift)  # rising edge: start
+        app._on_press(Key.shift)  # still held: must not toggle again
+
+        assert app.is_recording is True
+
+
+class TestDictationAppReplay:
+    """Test the replay hotkey and transcription history."""
+
+    @patch("whisper_dictation.dictation_app.AudioFeedback")
+    @patch("whisper_dictation.dictation_app.TextTyper")
+    @patch("whisper_dictation.dictation_app.Transcriber")
+    @patch("whisper_dictation.dictation_app.AudioRecorder")
+    def test_replay_types_last_history_entry(
+        self, mock_recorder_cls, mock_transcriber_cls, mock_typer_cls, mock_feedback_cls
+    ):
+        """Should retype the most recent transcription."""
+        from whisper_dictation.dictation_app import DictationApp
+
+        mock_typer = MagicMock()
+        mock_typer_cls.return_value = mock_typer
+
+        app = DictationApp()
+        app.history.extend(["first", "second"])
+
+        app._replay_last()
+
+        mock_typer.type_text.assert_called_once_with("second ")
+
+    @patch("whisper_dictation.dictation_app.AudioFeedback")
+    @patch("whisper_dictation.dictation_app.TextTyper")
+    @patch("whisper_dictation.dictation_app.Transcriber")
+    @patch("whisper_dictation.dictation_app.AudioRecorder")
+    def test_replay_with_empty_history_does_not_type(
+        self, mock_recorder_cls, mock_transcriber_cls, mock_typer_cls, mock_feedback_cls
+    ):
+        """Should not call the typer when there is nothing to replay."""
+        from whisper_dictation.dictation_app import DictationApp
+
+        mock_typer = MagicMock()
+        mock_typer_cls.return_value = mock_typer
+
+        app = DictationApp()
+        app._replay_last()
+
+        mock_typer.type_text.assert_not_called()
+
+    @patch("whisper_dictation.dictation_app.AudioFeedback")
+    @patch("whisper_dictation.dictation_app.TextTyper")
+    @patch("whisper_dictation.dictation_app.Transcriber")
+    @patch("whisper_dictation.dictation_app.AudioRecorder")
+    def test_history_evicts_oldest_past_ten(
+        self, mock_recorder_cls, mock_transcriber_cls, mock_typer_cls, mock_feedback_cls
+    ):
+        """History should only keep the last 10 transcriptions."""
+        from whisper_dictation.dictation_app import DictationApp
+
+        app = DictationApp()
+        for i in range(12):
+            app.history.append(f"item{i}")
+
+        assert len(app.history) == 10
+        assert list(app.history) == [f"item{i}" for i in range(2, 12)]
+
+    @patch("whisper_dictation.dictation_app.AudioFeedback")
+    @patch("whisper_dictation.dictation_app.TextTyper")
+    @patch("whisper_dictation.dictation_app.Transcriber")
+    @patch("whisper_dictation.dictation_app.AudioRecorder")
+    def test_process_recording_appends_to_history(
+        self, mock_recorder_cls, mock_transcriber_cls, mock_typer_cls, mock_feedback_cls
+    ):
+        """A successful transcription should be recorded in history."""
+        from whisper_dictation.dictation_app import DictationApp
+
+        mock_recorder = MagicMock()
+        mock_recorder.stop.return_value = np.zeros(16000, dtype=np.float32)
+        mock_recorder_cls.return_value = mock_recorder
+
+        mock_transcriber = MagicMock()
+        mock_transcriber.transcribe.return_value = "Hello world"
+        mock_transcriber_cls.return_value = mock_transcriber
+
+        app = DictationApp()
+        app._process_recording()
+
+        assert list(app.history) == ["Hello world"]
+
+    @patch("whisper_dictation.dictation_app.AudioFeedback")
+    @patch("whisper_dictation.dictation_app.TextTyper")
+    @patch("whisper_dictation.dictation_app.Transcriber")
+    @patch("whisper_dictation.dictation_app.AudioRecorder")
+    def test_replay_hotkey_queues_replay_command(
+        self, mock_recorder_cls, mock_transcriber_cls, mock_typer_cls, mock_feedback_cls
+    ):
+        """Pressing the replay combo should queue a replay command."""
+        from whisper_dictation.config import DictationConfig
+        from whisper_dictation.dictation_app import DictationApp
+        from pynput.keyboard import Key, KeyCode
+
+        # Distinct record hotkey so it can't also fire "start" here.
+        app = DictationApp(config=DictationConfig(hotkey={"ctrl", "alt"}))
+        app._on_press(Key.cmd)
+        app._on_press(Key.shift)
+        app._on_press(KeyCode.from_char("v"))
+
+        assert app.commands.get_nowait() == "replay"
+
+    @patch("whisper_dictation.dictation_app.AudioFeedback")
+    @patch("whisper_dictation.dictation_app.TextTyper")
+    @patch("whisper_dictation.dictation_app.Transcriber")
+    @patch("whisper_dictation.dictation_app.AudioRecorder")
+    def test_non_replay_key_does_not_queue_replay(
+        self, mock_recorder_cls, mock_transcriber_cls, mock_typer_cls, mock_feedback_cls
+    ):
+        """A different key under the same modifiers should not trigger replay."""
+        from whisper_dictation.config import DictationConfig
+        from whisper_dictation.dictation_app import DictationApp
+        from pynput.keyboard import Key, KeyCode
+
+        app = DictationApp(config=DictationConfig(hotkey={"ctrl", "alt"}))
+        app._on_press(Key.cmd)
+        app._on_press(Key.shift)
+        app._on_press(KeyCode.from_char("x"))
+
+        assert app.commands.empty()
+
+    @patch("whisper_dictation.dictation_app.AudioFeedback")
+    @patch("whisper_dictation.dictation_app.TextTyper")
+    @patch("whisper_dictation.dictation_app.Transcriber")
+    @patch("whisper_dictation.dictation_app.AudioRecorder")
+    def test_replay_key_without_modifiers_does_not_queue_replay(
+        self, mock_recorder_cls, mock_transcriber_cls, mock_typer_cls, mock_feedback_cls
+    ):
+        """The replay key alone, without its modifiers, must not trigger replay."""
+        from whisper_dictation.dictation_app import DictationApp
+        from pynput.keyboard import KeyCode
+
+        app = DictationApp()
+        app._on_press(KeyCode.from_char("v"))
+
+        assert app.commands.empty()
+
+
 class TestDictationAppThreadSafety:
     """Test thread safety of DictationApp."""
 
-    @patch("dictation.AudioFeedback")
-    @patch("dictation.TextTyper")
-    @patch("dictation.Transcriber")
-    @patch("dictation.AudioRecorder")
+    @patch("whisper_dictation.dictation_app.AudioFeedback")
+    @patch("whisper_dictation.dictation_app.TextTyper")
+    @patch("whisper_dictation.dictation_app.Transcriber")
+    @patch("whisper_dictation.dictation_app.AudioRecorder")
     def test_concurrent_key_presses(self, mock_recorder_cls, mock_transcriber_cls, mock_typer_cls, mock_feedback_cls):
         """Should handle concurrent key presses safely."""
-        from dictation import DictationApp
+        from whisper_dictation.dictation_app import DictationApp
         from pynput.keyboard import Key
 
         app = DictationApp()
@@ -510,13 +731,13 @@ class TestDictationAppThreadSafety:
         assert "cmd" in app.pressed_modifiers
         assert "shift" in app.pressed_modifiers
 
-    @patch("dictation.AudioFeedback")
-    @patch("dictation.TextTyper")
-    @patch("dictation.Transcriber")
-    @patch("dictation.AudioRecorder")
+    @patch("whisper_dictation.dictation_app.AudioFeedback")
+    @patch("whisper_dictation.dictation_app.TextTyper")
+    @patch("whisper_dictation.dictation_app.Transcriber")
+    @patch("whisper_dictation.dictation_app.AudioRecorder")
     def test_concurrent_releases(self, mock_recorder_cls, mock_transcriber_cls, mock_typer_cls, mock_feedback_cls):
         """Should handle concurrent key releases safely."""
-        from dictation import DictationApp
+        from whisper_dictation.dictation_app import DictationApp
         from pynput.keyboard import Key
 
         app = DictationApp()
@@ -540,42 +761,42 @@ class TestDictationAppThreadSafety:
 class TestDictationAppRecovery:
     """Tests for hotkey resilience: stale key state and disabled event taps."""
 
-    @patch("dictation.AudioFeedback")
-    @patch("dictation.TextTyper")
-    @patch("dictation.Transcriber")
-    @patch("dictation.AudioRecorder")
+    @patch("whisper_dictation.dictation_app.AudioFeedback")
+    @patch("whisper_dictation.dictation_app.TextTyper")
+    @patch("whisper_dictation.dictation_app.Transcriber")
+    @patch("whisper_dictation.dictation_app.AudioRecorder")
     def test_resync_stops_recording_after_missed_release(
         self, mock_recorder_cls, mock_transcriber_cls, mock_typer_cls, mock_feedback_cls
     ):
         """A missed key release must not leave the app stuck in recording."""
-        from dictation import DictationApp
+        from whisper_dictation.dictation_app import DictationApp
 
         app = DictationApp()
         app.is_recording = True
         app.pressed_modifiers = {"cmd", "shift"}
 
-        with patch("dictation.live_modifiers", return_value=set()):
+        with patch("whisper_dictation.dictation_app.live_modifiers", return_value=set()):
             app._resync_modifiers()
 
         assert app.pressed_modifiers == set()
         assert app.is_recording is False
         assert app.commands.get_nowait() == "stop"
 
-    @patch("dictation.AudioFeedback")
-    @patch("dictation.TextTyper")
-    @patch("dictation.Transcriber")
-    @patch("dictation.AudioRecorder")
+    @patch("whisper_dictation.dictation_app.AudioFeedback")
+    @patch("whisper_dictation.dictation_app.TextTyper")
+    @patch("whisper_dictation.dictation_app.Transcriber")
+    @patch("whisper_dictation.dictation_app.AudioRecorder")
     def test_resync_keeps_recording_while_hotkey_held(
         self, mock_recorder_cls, mock_transcriber_cls, mock_typer_cls, mock_feedback_cls
     ):
         """Recording must continue while the hotkey is physically held."""
-        from dictation import DictationApp
+        from whisper_dictation.dictation_app import DictationApp
 
         app = DictationApp()
         app.is_recording = True
         app.pressed_modifiers = {"cmd"}
 
-        with patch("dictation.live_modifiers", return_value={"cmd", "shift"}):
+        with patch("whisper_dictation.dictation_app.live_modifiers", return_value={"cmd", "shift"}):
             app._resync_modifiers()
 
         assert app.pressed_modifiers == {"cmd", "shift"}
@@ -584,27 +805,27 @@ class TestDictationAppRecovery:
 
     def test_listener_reenables_disabled_tap(self):
         """A tap disabled by macOS should be switched back on."""
-        import dictation
+        import whisper_dictation.keyboard as keyboard_module
 
-        listener_cls = dictation._resilient_listener_class()
+        listener_cls = keyboard_module._resilient_listener_class()
         listener = listener_cls(on_press=lambda k: None, on_release=lambda k: None)
         listener._event_tap = object()
 
-        with patch("dictation.CGEventTapIsEnabled", return_value=False) as is_enabled, \
-             patch("dictation.CGEventTapEnable") as enable:
+        with patch("whisper_dictation.keyboard.CGEventTapIsEnabled", return_value=False) as is_enabled, \
+             patch("whisper_dictation.keyboard.CGEventTapEnable") as enable:
             assert listener.ensure_tap_enabled() is True
             enable.assert_called_once_with(listener._event_tap, True)
 
     def test_listener_leaves_healthy_tap_alone(self):
         """A healthy tap should not be touched."""
-        import dictation
+        import whisper_dictation.keyboard as keyboard_module
 
-        listener_cls = dictation._resilient_listener_class()
+        listener_cls = keyboard_module._resilient_listener_class()
         listener = listener_cls(on_press=lambda k: None, on_release=lambda k: None)
         listener._event_tap = object()
 
-        with patch("dictation.CGEventTapIsEnabled", return_value=True), \
-             patch("dictation.CGEventTapEnable") as enable:
+        with patch("whisper_dictation.keyboard.CGEventTapIsEnabled", return_value=True), \
+             patch("whisper_dictation.keyboard.CGEventTapEnable") as enable:
             assert listener.ensure_tap_enabled() is False
             enable.assert_not_called()
 
@@ -612,15 +833,15 @@ class TestDictationAppRecovery:
 class TestDictationAppDoesNotStall:
     """A slow or hung transcription must never block the next recording."""
 
-    @patch("dictation.AudioFeedback")
-    @patch("dictation.TextTyper")
-    @patch("dictation.Transcriber")
-    @patch("dictation.AudioRecorder")
+    @patch("whisper_dictation.dictation_app.AudioFeedback")
+    @patch("whisper_dictation.dictation_app.TextTyper")
+    @patch("whisper_dictation.dictation_app.Transcriber")
+    @patch("whisper_dictation.dictation_app.AudioRecorder")
     def test_slow_transcription_does_not_block_next_recording(
         self, mock_recorder_cls, mock_transcriber_cls, mock_typer_cls, mock_feedback_cls
     ):
         """Recording N+1 must start even while recording N is still processing."""
-        from dictation import DictationApp
+        from whisper_dictation.dictation_app import DictationApp
         from pynput.keyboard import Key
 
         mock_recorder = MagicMock()

@@ -15,10 +15,10 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 class TestTranscriberInit:
     """Test Transcriber initialization."""
 
-    @patch("dictation.WhisperModel")
+    @patch("whisper_dictation.transcriber.WhisperModel")
     def test_loads_model_with_default_size(self, mock_whisper_model):
         """Should load base model by default."""
-        from dictation import Transcriber
+        from whisper_dictation.transcriber import Transcriber
 
         Transcriber()
 
@@ -26,10 +26,10 @@ class TestTranscriberInit:
             "base", device="cpu", compute_type="int8"
         )
 
-    @patch("dictation.WhisperModel")
+    @patch("whisper_dictation.transcriber.WhisperModel")
     def test_loads_model_with_custom_size(self, mock_whisper_model):
         """Should load specified model size."""
-        from dictation import Transcriber
+        from whisper_dictation.transcriber import Transcriber
 
         Transcriber(model_size="small")
 
@@ -37,55 +37,55 @@ class TestTranscriberInit:
             "small", device="cpu", compute_type="int8"
         )
 
-    @patch("dictation.WhisperModel")
+    @patch("whisper_dictation.transcriber.WhisperModel")
     def test_stores_language(self, mock_whisper_model):
         """Should store language setting."""
-        from dictation import Transcriber
+        from whisper_dictation.transcriber import Transcriber
 
         transcriber = Transcriber(language="de")
 
         assert transcriber.language == "de"
 
-    @patch("dictation.WhisperModel")
+    @patch("whisper_dictation.transcriber.WhisperModel")
     def test_default_language_is_english(self, mock_whisper_model):
         """Should default to English language."""
-        from dictation import Transcriber
+        from whisper_dictation.transcriber import Transcriber
 
         transcriber = Transcriber()
 
         assert transcriber.language == "en"
 
-    @patch("dictation.WhisperModel")
+    @patch("whisper_dictation.transcriber.WhisperModel")
     def test_stores_translate_flag(self, mock_whisper_model):
         """Should store translate flag."""
-        from dictation import Transcriber
+        from whisper_dictation.transcriber import Transcriber
 
         transcriber = Transcriber(translate=True)
 
         assert transcriber.translate is True
 
-    @patch("dictation.WhisperModel")
+    @patch("whisper_dictation.transcriber.WhisperModel")
     def test_stores_multilingual_flag(self, mock_whisper_model):
         """Should store multilingual flag."""
-        from dictation import Transcriber
+        from whisper_dictation.transcriber import Transcriber
 
         transcriber = Transcriber(multilingual=True)
 
         assert transcriber.multilingual is True
 
-    @patch("dictation.WhisperModel")
+    @patch("whisper_dictation.transcriber.WhisperModel")
     def test_stores_hotwords(self, mock_whisper_model):
         """Should store hotwords list."""
-        from dictation import Transcriber
+        from whisper_dictation.transcriber import Transcriber
 
         transcriber = Transcriber(hotwords=["OpenAI", "Whisper"])
 
         assert transcriber.hotwords == ["OpenAI", "Whisper"]
 
-    @patch("dictation.WhisperModel")
+    @patch("whisper_dictation.transcriber.WhisperModel")
     def test_default_hotwords_empty(self, mock_whisper_model):
         """Should default to empty hotwords list."""
-        from dictation import Transcriber
+        from whisper_dictation.transcriber import Transcriber
 
         transcriber = Transcriber()
 
@@ -95,10 +95,10 @@ class TestTranscriberInit:
 class TestTranscriberTranscribe:
     """Test Transcriber transcription functionality."""
 
-    @patch("dictation.WhisperModel")
+    @patch("whisper_dictation.transcriber.WhisperModel")
     def test_transcribe_calls_model(self, mock_whisper_model):
         """Should call model.transcribe with correct parameters."""
-        from dictation import Transcriber
+        from whisper_dictation.transcriber import Transcriber
 
         mock_model = MagicMock()
         mock_segment = MagicMock()
@@ -128,10 +128,10 @@ class TestTranscriberTranscribe:
         finally:
             path.unlink(missing_ok=True)
 
-    @patch("dictation.WhisperModel")
+    @patch("whisper_dictation.transcriber.WhisperModel")
     def test_transcribe_returns_text(self, mock_whisper_model):
         """Should return transcribed text."""
-        from dictation import Transcriber
+        from whisper_dictation.transcriber import Transcriber
 
         mock_model = MagicMock()
         mock_segment = MagicMock()
@@ -155,10 +155,10 @@ class TestTranscriberTranscribe:
         finally:
             path.unlink(missing_ok=True)
 
-    @patch("dictation.WhisperModel")
+    @patch("whisper_dictation.transcriber.WhisperModel")
     def test_transcribe_concatenates_segments(self, mock_whisper_model):
         """Should concatenate multiple segments."""
-        from dictation import Transcriber
+        from whisper_dictation.transcriber import Transcriber
 
         mock_model = MagicMock()
         mock_segment1 = MagicMock()
@@ -187,10 +187,10 @@ class TestTranscriberTranscribe:
         finally:
             path.unlink(missing_ok=True)
 
-    @patch("dictation.WhisperModel")
+    @patch("whisper_dictation.transcriber.WhisperModel")
     def test_transcribe_strips_whitespace(self, mock_whisper_model):
         """Should strip whitespace from segments."""
-        from dictation import Transcriber
+        from whisper_dictation.transcriber import Transcriber
 
         mock_model = MagicMock()
         mock_segment = MagicMock()
@@ -214,10 +214,10 @@ class TestTranscriberTranscribe:
         finally:
             path.unlink(missing_ok=True)
 
-    @patch("dictation.WhisperModel")
+    @patch("whisper_dictation.transcriber.WhisperModel")
     def test_transcribe_empty_segments(self, mock_whisper_model):
         """Should handle empty segments list."""
-        from dictation import Transcriber
+        from whisper_dictation.transcriber import Transcriber
 
         mock_model = MagicMock()
         mock_model.transcribe.return_value = ([], MagicMock())
@@ -239,10 +239,10 @@ class TestTranscriberTranscribe:
         finally:
             path.unlink(missing_ok=True)
 
-    @patch("dictation.WhisperModel")
+    @patch("whisper_dictation.transcriber.WhisperModel")
     def test_transcribe_uses_configured_language(self, mock_whisper_model):
         """Should use the configured language for transcription."""
-        from dictation import Transcriber
+        from whisper_dictation.transcriber import Transcriber
 
         mock_model = MagicMock()
         mock_model.transcribe.return_value = ([], MagicMock())
@@ -269,10 +269,10 @@ class TestTranscriberTranscribe:
 class TestTranscriberTranslation:
     """Test Transcriber translation functionality."""
 
-    @patch("dictation.WhisperModel")
+    @patch("whisper_dictation.transcriber.WhisperModel")
     def test_translate_sets_task(self, mock_whisper_model):
         """Should set task to translate when translate=True."""
-        from dictation import Transcriber
+        from whisper_dictation.transcriber import Transcriber
 
         mock_model = MagicMock()
         mock_model.transcribe.return_value = ([], MagicMock())
@@ -295,10 +295,10 @@ class TestTranscriberTranslation:
         finally:
             path.unlink(missing_ok=True)
 
-    @patch("dictation.WhisperModel")
+    @patch("whisper_dictation.transcriber.WhisperModel")
     def test_default_task_is_transcribe(self, mock_whisper_model):
         """Should default to transcribe task."""
-        from dictation import Transcriber
+        from whisper_dictation.transcriber import Transcriber
 
         mock_model = MagicMock()
         mock_model.transcribe.return_value = ([], MagicMock())
@@ -325,10 +325,10 @@ class TestTranscriberTranslation:
 class TestTranscriberMultilingual:
     """Test Transcriber multilingual functionality."""
 
-    @patch("dictation.WhisperModel")
+    @patch("whisper_dictation.transcriber.WhisperModel")
     def test_multilingual_sets_language_none(self, mock_whisper_model):
         """Should set language to None when multilingual=True."""
-        from dictation import Transcriber
+        from whisper_dictation.transcriber import Transcriber
 
         mock_model = MagicMock()
         mock_model.transcribe.return_value = ([], MagicMock())
@@ -352,10 +352,10 @@ class TestTranscriberMultilingual:
         finally:
             path.unlink(missing_ok=True)
 
-    @patch("dictation.WhisperModel")
+    @patch("whisper_dictation.transcriber.WhisperModel")
     def test_non_multilingual_uses_language(self, mock_whisper_model):
         """Should use specified language when multilingual=False."""
-        from dictation import Transcriber
+        from whisper_dictation.transcriber import Transcriber
 
         mock_model = MagicMock()
         mock_model.transcribe.return_value = ([], MagicMock())
@@ -383,10 +383,10 @@ class TestTranscriberMultilingual:
 class TestTranscriberHotwords:
     """Test Transcriber hotwords functionality."""
 
-    @patch("dictation.WhisperModel")
+    @patch("whisper_dictation.transcriber.WhisperModel")
     def test_passes_hotwords_to_model(self, mock_whisper_model):
         """Should pass hotwords to the model."""
-        from dictation import Transcriber
+        from whisper_dictation.transcriber import Transcriber
 
         mock_model = MagicMock()
         mock_model.transcribe.return_value = ([], MagicMock())
@@ -409,10 +409,10 @@ class TestTranscriberHotwords:
         finally:
             path.unlink(missing_ok=True)
 
-    @patch("dictation.WhisperModel")
+    @patch("whisper_dictation.transcriber.WhisperModel")
     def test_empty_hotwords_passes_none(self, mock_whisper_model):
         """Should pass None when no hotwords specified."""
-        from dictation import Transcriber
+        from whisper_dictation.transcriber import Transcriber
 
         mock_model = MagicMock()
         mock_model.transcribe.return_value = ([], MagicMock())

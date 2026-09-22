@@ -13,7 +13,7 @@ class TestArgosTranslator:
 
     def test_init_stores_languages(self):
         """Should store source and target languages."""
-        from dictation import ArgosTranslator
+        from whisper_dictation.translator import ArgosTranslator
         
         translator = ArgosTranslator(source_lang="en", target_lang="nl")
         
@@ -22,14 +22,14 @@ class TestArgosTranslator:
 
     def test_lazy_loading(self):
         """Should not load translator on initialization."""
-        from dictation import ArgosTranslator
+        from whisper_dictation.translator import ArgosTranslator
         
         translator = ArgosTranslator()
         assert translator._translator is None
 
     def test_handles_empty_string(self):
         """Should handle empty string without loading translator."""
-        from dictation import ArgosTranslator
+        from whisper_dictation.translator import ArgosTranslator
         
         translator = ArgosTranslator()
         result = translator.translate("")
@@ -39,7 +39,7 @@ class TestArgosTranslator:
 
     def test_handles_import_error(self):
         """Should handle missing argostranslate gracefully."""
-        from dictation import ArgosTranslator
+        from whisper_dictation.translator import ArgosTranslator
         
         # Mock the import to fail
         with patch.dict(sys.modules, {'argostranslate': None, 'argostranslate.package': None, 'argostranslate.translate': None}):
@@ -54,7 +54,7 @@ class TestArgosTranslator:
 
     def test_process_delegates_to_translate(self):
         """Should delegate process() to translate()."""
-        from dictation import ArgosTranslator
+        from whisper_dictation.translator import ArgosTranslator
         
         translator = ArgosTranslator()
         translator._translator = MagicMock()
@@ -66,7 +66,7 @@ class TestArgosTranslator:
 
     def test_translate_calls_translator(self):
         """Should call the underlying translator."""
-        from dictation import ArgosTranslator
+        from whisper_dictation.translator import ArgosTranslator
         
         mock_translator = MagicMock()
         mock_translator.translate.return_value = "Bonjour le monde"
@@ -81,7 +81,7 @@ class TestArgosTranslator:
 
     def test_handles_translation_error(self):
         """Should handle translation errors gracefully."""
-        from dictation import ArgosTranslator
+        from whisper_dictation.translator import ArgosTranslator
         
         mock_translator = MagicMock()
         mock_translator.translate.side_effect = Exception("Translation failed")
@@ -96,7 +96,7 @@ class TestArgosTranslator:
 
     def test_unavailable_translator_returns_original(self):
         """Should return original text when translator is unavailable."""
-        from dictation import ArgosTranslator
+        from whisper_dictation.translator import ArgosTranslator
         
         translator = ArgosTranslator()
         translator._translator = "unavailable"
@@ -112,7 +112,7 @@ class TestArgosTranslatorIntegration:
     @pytest.mark.skip(reason="Requires argostranslate to be installed")
     def test_real_translation_en_to_nl(self):
         """Test actual translation from English to Dutch."""
-        from dictation import ArgosTranslator
+        from whisper_dictation.translator import ArgosTranslator
         
         translator = ArgosTranslator(source_lang="en", target_lang="nl")
         result = translator.translate("Hello world")

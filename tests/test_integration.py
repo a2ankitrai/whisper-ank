@@ -15,12 +15,12 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 class TestEndToEndFlow:
     """Test complete dictation flow from recording to typing."""
 
-    @patch("dictation.CGEventPost")
-    @patch("dictation.CGEventKeyboardSetUnicodeString")
-    @patch("dictation.CGEventCreateKeyboardEvent")
-    @patch("dictation.CGEventSourceCreate")
-    @patch("dictation.WhisperModel")
-    @patch("dictation.sd.InputStream")
+    @patch("whisper_dictation.text_typer.CGEventPost")
+    @patch("whisper_dictation.text_typer.CGEventKeyboardSetUnicodeString")
+    @patch("whisper_dictation.text_typer.CGEventCreateKeyboardEvent")
+    @patch("whisper_dictation.text_typer.CGEventSourceCreate")
+    @patch("whisper_dictation.transcriber.WhisperModel")
+    @patch("whisper_dictation.audio_recorder.sd.InputStream")
     def test_full_dictation_flow(
         self,
         mock_input_stream,
@@ -31,7 +31,7 @@ class TestEndToEndFlow:
         mock_post,
     ):
         """Test complete flow: record → transcribe → type."""
-        from dictation import DictationApp
+        from whisper_dictation.dictation_app import DictationApp
         from pynput.keyboard import Key
 
         # Setup mocks
@@ -83,13 +83,13 @@ class TestEndToEndFlow:
 class TestAudioToTranscriptionFlow:
     """Test audio recording to transcription flow."""
 
-    @patch("dictation.WhisperModel")
-    @patch("dictation.sd.InputStream")
+    @patch("whisper_dictation.transcriber.WhisperModel")
+    @patch("whisper_dictation.audio_recorder.sd.InputStream")
     def test_recording_produces_valid_wav(
         self, mock_input_stream, mock_whisper_model
     ):
         """Test that recorded audio produces valid WAV for transcription."""
-        from dictation import AudioRecorder
+        from whisper_dictation.audio_recorder import AudioRecorder
 
         mock_stream = MagicMock()
         mock_input_stream.return_value = mock_stream
@@ -125,11 +125,11 @@ class TestAudioToTranscriptionFlow:
 class TestTranscriptionToTypingFlow:
     """Test transcription to typing flow."""
 
-    @patch("dictation.time.sleep")
-    @patch("dictation.CGEventPost")
-    @patch("dictation.CGEventKeyboardSetUnicodeString")
-    @patch("dictation.CGEventCreateKeyboardEvent")
-    @patch("dictation.CGEventSourceCreate")
+    @patch("whisper_dictation.text_typer.time.sleep")
+    @patch("whisper_dictation.text_typer.CGEventPost")
+    @patch("whisper_dictation.text_typer.CGEventKeyboardSetUnicodeString")
+    @patch("whisper_dictation.text_typer.CGEventCreateKeyboardEvent")
+    @patch("whisper_dictation.text_typer.CGEventSourceCreate")
     def test_transcription_types_correctly(
         self,
         mock_event_source,
@@ -139,7 +139,7 @@ class TestTranscriptionToTypingFlow:
         mock_sleep,
     ):
         """Test that transcribed text is typed correctly."""
-        from dictation import TextTyper
+        from whisper_dictation.text_typer import TextTyper
 
         mock_event = MagicMock()
         mock_create_event.return_value = mock_event
@@ -163,14 +163,14 @@ class TestTranscriptionToTypingFlow:
 class TestErrorRecovery:
     """Test error recovery scenarios."""
 
-    @patch("dictation.TextTyper")
-    @patch("dictation.Transcriber")
-    @patch("dictation.AudioRecorder")
+    @patch("whisper_dictation.dictation_app.TextTyper")
+    @patch("whisper_dictation.dictation_app.Transcriber")
+    @patch("whisper_dictation.dictation_app.AudioRecorder")
     def test_recovers_from_transcription_error(
         self, mock_recorder_cls, mock_transcriber_cls, mock_typer_cls
     ):
         """Should recover and be ready for next recording after error."""
-        from dictation import DictationApp
+        from whisper_dictation.dictation_app import DictationApp
         from pynput.keyboard import Key
 
         mock_recorder = MagicMock()
@@ -202,14 +202,14 @@ class TestErrorRecovery:
         # Should have typed on second attempt
         mock_typer.type_text.assert_called_once_with("Second call succeeds ")
 
-    @patch("dictation.TextTyper")
-    @patch("dictation.Transcriber")
-    @patch("dictation.AudioRecorder")
+    @patch("whisper_dictation.dictation_app.TextTyper")
+    @patch("whisper_dictation.dictation_app.Transcriber")
+    @patch("whisper_dictation.dictation_app.AudioRecorder")
     def test_recovers_from_audio_error(
         self, mock_recorder_cls, mock_transcriber_cls, mock_typer_cls
     ):
         """Should recover from audio recording errors."""
-        from dictation import DictationApp
+        from whisper_dictation.dictation_app import DictationApp
         from pynput.keyboard import Key
 
         mock_recorder = MagicMock()
@@ -243,14 +243,14 @@ class TestErrorRecovery:
 class TestEdgeCases:
     """Test edge cases and boundary conditions."""
 
-    @patch("dictation.TextTyper")
-    @patch("dictation.Transcriber")
-    @patch("dictation.AudioRecorder")
+    @patch("whisper_dictation.dictation_app.TextTyper")
+    @patch("whisper_dictation.dictation_app.Transcriber")
+    @patch("whisper_dictation.dictation_app.AudioRecorder")
     def test_rapid_start_stop(
         self, mock_recorder_cls, mock_transcriber_cls, mock_typer_cls
     ):
         """Should handle rapid start/stop cycles."""
-        from dictation import DictationApp
+        from whisper_dictation.dictation_app import DictationApp
         from pynput.keyboard import Key
 
         mock_recorder = MagicMock()
@@ -269,14 +269,14 @@ class TestEdgeCases:
         # Should not crash
         assert app.running is True
 
-    @patch("dictation.TextTyper")
-    @patch("dictation.Transcriber")
-    @patch("dictation.AudioRecorder")
+    @patch("whisper_dictation.dictation_app.TextTyper")
+    @patch("whisper_dictation.dictation_app.Transcriber")
+    @patch("whisper_dictation.dictation_app.AudioRecorder")
     def test_multiple_modifier_keys(
         self, mock_recorder_cls, mock_transcriber_cls, mock_typer_cls
     ):
         """Should handle multiple modifier key presses."""
-        from dictation import DictationApp
+        from whisper_dictation.dictation_app import DictationApp
         from pynput.keyboard import Key
 
         mock_recorder = MagicMock()
@@ -301,11 +301,11 @@ class TestEdgeCases:
 
         assert app.pressed_modifiers == set()
 
-    @patch("dictation.time.sleep")
-    @patch("dictation.CGEventPost")
-    @patch("dictation.CGEventKeyboardSetUnicodeString")
-    @patch("dictation.CGEventCreateKeyboardEvent")
-    @patch("dictation.CGEventSourceCreate")
+    @patch("whisper_dictation.text_typer.time.sleep")
+    @patch("whisper_dictation.text_typer.CGEventPost")
+    @patch("whisper_dictation.text_typer.CGEventKeyboardSetUnicodeString")
+    @patch("whisper_dictation.text_typer.CGEventCreateKeyboardEvent")
+    @patch("whisper_dictation.text_typer.CGEventSourceCreate")
     def test_special_characters_typing(
         self,
         mock_event_source,
@@ -315,7 +315,7 @@ class TestEdgeCases:
         mock_sleep,
     ):
         """Should correctly type special characters."""
-        from dictation import TextTyper
+        from whisper_dictation.text_typer import TextTyper
 
         mock_event = MagicMock()
         mock_create_event.return_value = mock_event
@@ -327,11 +327,11 @@ class TestEdgeCases:
         # Verify unicode was set for each character
         assert mock_set_unicode.call_count == len(special_text) * 2
 
-    @patch("dictation.time.sleep")
-    @patch("dictation.CGEventPost")
-    @patch("dictation.CGEventKeyboardSetUnicodeString")
-    @patch("dictation.CGEventCreateKeyboardEvent")
-    @patch("dictation.CGEventSourceCreate")
+    @patch("whisper_dictation.text_typer.time.sleep")
+    @patch("whisper_dictation.text_typer.CGEventPost")
+    @patch("whisper_dictation.text_typer.CGEventKeyboardSetUnicodeString")
+    @patch("whisper_dictation.text_typer.CGEventCreateKeyboardEvent")
+    @patch("whisper_dictation.text_typer.CGEventSourceCreate")
     def test_emoji_typing(
         self,
         mock_event_source,
@@ -341,7 +341,7 @@ class TestEdgeCases:
         mock_sleep,
     ):
         """Should handle emoji characters."""
-        from dictation import TextTyper
+        from whisper_dictation.text_typer import TextTyper
 
         mock_event = MagicMock()
         mock_create_event.return_value = mock_event

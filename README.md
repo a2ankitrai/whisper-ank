@@ -73,6 +73,8 @@ A local speech-to-text dictation application that types transcribed text directl
 
 The key innovation is using **CGEvents at the HID (Human Interface Device) level** — this simulates actual keyboard input at the OS level, making it work with any application without special integration.
 
+The diagram above shows the default **push-to-talk** flow (hold to record, release to stop). Pass `--recording-mode toggle` to instead press the hotkey once to start and again to stop — useful if holding modifiers for a long sentence is uncomfortable. The last 10 transcriptions are kept in memory regardless of mode; press the replay hotkey (`Cmd+Shift+V` by default) to retype the most recent one into whatever window is now focused, e.g. to paste a dictated sentence into a second app after the fact.
+
 ---
 
 ## Prerequisites
@@ -148,6 +150,8 @@ This installs:
 - `numpy` — Audio data processing
 - `pynput` — Keyboard hotkey detection
 - `pyobjc-framework-Quartz` — macOS text injection
+- `pyobjc-framework-ApplicationServices` — Accessibility permission checks
+- `pyobjc-framework-Cocoa` — Frontmost app lookup for diagnostics
 
 ### Step 4: Grant Permissions
 
@@ -244,6 +248,8 @@ python dictation.py [OPTIONS]
 | `--snippets-file` | none | Path to snippets file (see below) |
 | `--no-audio-feedback` | off | Disable beeps on record start/stop |
 | `--hotkey` | `cmd+shift` | Custom hotkey (e.g., `ctrl+shift`). Modifiers: `cmd`, `shift`, `ctrl`, `alt` |
+| `--recording-mode` | `push_to_talk` | `push_to_talk` (hold to record) or `toggle` (press once to start, press again to stop) |
+| `--replay-hotkey` | `cmd+shift+v` | Hotkey that retypes the most recent transcription (last 10 are kept in memory) |
 
 ### Examples
 
@@ -268,6 +274,12 @@ python dictation.py --hotwords "OpenAI,Whisper,GitHub,Kubernetes"
 
 # Custom hotkey
 python dictation.py --hotkey ctrl+shift
+
+# Toggle mode: press once to start, press again to stop (no holding needed)
+python dictation.py --recording-mode toggle
+
+# Retype the last transcription elsewhere with a different hotkey
+python dictation.py --replay-hotkey ctrl+alt+r
 
 # Maximum accuracy
 python dictation.py --model large-v3 --grammar gramformer
@@ -383,13 +395,26 @@ kill -USR1 $(cat dictation.pid)       # dump every thread's stack to the log
 
 #### "Recording started but no text appears"
 
-**Cause**: Accessibility permission not granted.
+**Root cause**: macOS silently drops every synthetic keystroke
+(`CGEventPost`) when the calling process lacks Accessibility permission, or
+when system-wide **Secure Keyboard Entry** is active — no exception is
+raised, so transcription and processing appear to work fine while nothing
+ever gets typed.
 
-**Fix**:
+**Fix**: The app now checks both automatically:
+- On startup, it requests Accessibility access via the native macOS prompt
+  if it isn't already granted, and prints instructions if you dismiss it.
+- Before every typed line, it re-checks and warns (naming the frontmost app)
+  if permission was revoked or Secure Keyboard Entry got turned on mid-session.
+
+**If it still doesn't type**:
 1. Go to **System Settings** → **Privacy & Security** → **Accessibility**
 2. Ensure your terminal app is in the list and enabled
-3. Remove and re-add if necessary
-4. Restart the terminal and try again
+3. Remove and re-add if necessary, then restart the terminal and try again
+4. If a "⚠️ Secure Keyboard Entry is active" warning appears, disable it —
+   check the frontmost app named in the warning (e.g. iTerm2 has a
+   **Secure Keyboard Entry** toggle in its main menu; some password managers
+   enable it too and can leave it stuck on)
 
 #### "No audio being recorded"
 
@@ -455,7 +480,7 @@ Check the application output in the terminal for error messages. Most issues are
 
 ## Testing
 
-The project includes a comprehensive test suite with 75% code coverage.
+The project includes a comprehensive test suite with 67% code coverage.
 
 ### Running Tests
 
@@ -467,7 +492,7 @@ source venv/bin/activate
 pytest
 
 # Run with coverage report
-pytest --cov=dictation --cov-report=term-missing
+pytest --cov=whisper_dictation --cov-report=term-missing
 
 # Run specific test file
 pytest tests/test_audio_recorder.py
@@ -496,11 +521,28 @@ tests/
 ### Coverage Summary
 
 ```
-Name           Stmts   Miss  Cover
-----------------------------------
-dictation.py     436    111    75%
-----------------------------------
+Name                                     Stmts   Miss  Cover
+--------------------------------------------------------------
+whisper_dictation/__init__.py                0      0   100%
+whisper_dictation/__main__.py                3      3     0%
+whisper_dictation/audio_feedback.py         22      0   100%
+whisper_dictation/audio_recorder.py         79     11    86%
+whisper_dictation/cli.py                    40     40     0%
+whisper_dictation/config.py                 51      3    94%
+whisper_dictation/dictation_app.py         273    123    55%
+whisper_dictation/grammar_corrector.py      74     19    74%
+whisper_dictation/keyboard.py               30      7    77%
+whisper_dictation/text_processors.py        33      1    97%
+whisper_dictation/text_typer.py             22      0   100%
+whisper_dictation/transcriber.py            19      0   100%
+whisper_dictation/translator.py             81     32    60%
+--------------------------------------------------------------
+TOTAL                                       727    239    67%
 ```
+
+`cli.py` and `dictation_app.run()`'s permission-error branches are mostly
+exercised manually (they need real hotkey/Accessibility state), which is why
+their coverage is lower than the well-isolated logic modules.
 
 ---
 
@@ -595,18 +637,32 @@ pip install -r requirements.txt
 pip install pytest pytest-cov
 
 # Run tests
-pytest --cov=dictation
+pytest --cov=whisper_dictation
 ```
 
 ### Project Structure
 
 ```
 whisper-dictation/
-├── dictation.py        # Main application
+├── dictation.py                    # Thin backward-compatible entry point
+├── whisper_dictation/              # Main application package
+│   ├── __init__.py
+│   ├── __main__.py                 # Enables `python -m whisper_dictation`
+│   ├── cli.py                      # Argument parsing + main()
+│   ├── config.py                   # DictationConfig
+│   ├── audio_recorder.py           # AudioRecorder
+│   ├── transcriber.py              # Transcriber (Faster-Whisper)
+│   ├── text_processors.py          # TextProcessor, FillerRemover, SnippetExpander
+│   ├── grammar_corrector.py        # LanguageToolCorrector, GramformerCorrector
+│   ├── translator.py               # Translator, ArgosTranslator
+│   ├── audio_feedback.py           # AudioFeedback
+│   ├── text_typer.py               # TextTyper (CGEvents)
+│   ├── keyboard.py                 # Modifier tracking, resilient listener
+│   └── dictation_app.py            # DictationApp orchestration
 ├── requirements.txt    # Python dependencies
 ├── README.md          # This file
 ├── pytest.ini         # Test configuration
-├── tests/             # Test suite
+├── tests/             # Test suite (one file per module above)
 │   ├── __init__.py
 │   ├── test_audio_recorder.py
 │   ├── test_transcriber.py
@@ -615,6 +671,8 @@ whisper-dictation/
 │   └── test_integration.py
 └── venv/              # Virtual environment (not in git)
 ```
+
+`dictation.py` and `start_dictation.sh`/`stop_dictation.sh` are unchanged — they still work exactly as before. You can also run the app directly as a package with `python -m whisper_dictation`.
 
 ---
 

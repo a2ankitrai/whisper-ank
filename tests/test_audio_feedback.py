@@ -13,14 +13,14 @@ class TestAudioFeedbackInit:
 
     def test_default_enabled(self):
         """Should be enabled by default."""
-        from dictation import AudioFeedback
+        from whisper_dictation.audio_feedback import AudioFeedback
         
         feedback = AudioFeedback()
         assert feedback.enabled is True
 
     def test_can_disable(self):
         """Should be able to disable."""
-        from dictation import AudioFeedback
+        from whisper_dictation.audio_feedback import AudioFeedback
         
         feedback = AudioFeedback(enabled=False)
         assert feedback.enabled is False
@@ -31,7 +31,7 @@ class TestAudioFeedbackPlayStart:
 
     def test_plays_when_enabled(self):
         """Should play sound when enabled."""
-        from dictation import AudioFeedback
+        from whisper_dictation.audio_feedback import AudioFeedback
         
         with patch('subprocess.Popen') as mock_popen:
             feedback = AudioFeedback(enabled=True)
@@ -41,7 +41,7 @@ class TestAudioFeedbackPlayStart:
 
     def test_silent_when_disabled(self):
         """Should not play sound when disabled."""
-        from dictation import AudioFeedback
+        from whisper_dictation.audio_feedback import AudioFeedback
         
         with patch('subprocess.Popen') as mock_popen:
             feedback = AudioFeedback(enabled=False)
@@ -51,7 +51,7 @@ class TestAudioFeedbackPlayStart:
 
     def test_handles_subprocess_error(self):
         """Should handle subprocess errors gracefully."""
-        from dictation import AudioFeedback
+        from whisper_dictation.audio_feedback import AudioFeedback
         
         with patch('subprocess.Popen', side_effect=Exception("Audio failed")):
             feedback = AudioFeedback(enabled=True)
@@ -64,7 +64,7 @@ class TestAudioFeedbackPlayStop:
 
     def test_plays_when_enabled(self):
         """Should play sound when enabled."""
-        from dictation import AudioFeedback
+        from whisper_dictation.audio_feedback import AudioFeedback
         
         with patch('subprocess.Popen') as mock_popen:
             feedback = AudioFeedback(enabled=True)
@@ -74,7 +74,7 @@ class TestAudioFeedbackPlayStop:
 
     def test_silent_when_disabled(self):
         """Should not play sound when disabled."""
-        from dictation import AudioFeedback
+        from whisper_dictation.audio_feedback import AudioFeedback
         
         with patch('subprocess.Popen') as mock_popen:
             feedback = AudioFeedback(enabled=False)
@@ -84,7 +84,7 @@ class TestAudioFeedbackPlayStop:
 
     def test_handles_subprocess_error(self):
         """Should handle subprocess errors gracefully."""
-        from dictation import AudioFeedback
+        from whisper_dictation.audio_feedback import AudioFeedback
         
         with patch('subprocess.Popen', side_effect=Exception("Audio failed")):
             feedback = AudioFeedback(enabled=True)
@@ -97,7 +97,7 @@ class TestAudioFeedbackBeep:
 
     def test_uses_system_sound(self):
         """Should use macOS system sound."""
-        from dictation import AudioFeedback
+        from whisper_dictation.audio_feedback import AudioFeedback
         
         with patch('subprocess.Popen') as mock_popen:
             feedback = AudioFeedback(enabled=True)
@@ -114,7 +114,7 @@ class TestAudioFeedbackBeep:
         Blocking here would stall the keyboard event-tap callback and make
         macOS disable the hotkey.
         """
-        from dictation import AudioFeedback
+        from whisper_dictation.audio_feedback import AudioFeedback
         
         with patch('subprocess.Popen') as mock_popen:
             feedback = AudioFeedback(enabled=True)
@@ -126,7 +126,7 @@ class TestAudioFeedbackBeep:
 
     def test_discards_output(self):
         """Should discard subprocess output instead of filling a pipe."""
-        from dictation import AudioFeedback
+        from whisper_dictation.audio_feedback import AudioFeedback
         import subprocess
         
         with patch('subprocess.Popen') as mock_popen:
@@ -139,7 +139,7 @@ class TestAudioFeedbackBeep:
 
     def test_start_and_stop_use_different_sounds(self):
         """Start and stop must be audibly distinguishable."""
-        from dictation import AudioFeedback
+        from whisper_dictation.audio_feedback import AudioFeedback
         
         with patch('subprocess.Popen') as mock_popen:
             feedback = AudioFeedback(enabled=True)
@@ -152,7 +152,7 @@ class TestAudioFeedbackBeep:
 
     def test_handles_spawn_error(self):
         """Should handle process spawn errors gracefully."""
-        from dictation import AudioFeedback
+        from whisper_dictation.audio_feedback import AudioFeedback
         
         with patch('subprocess.Popen', side_effect=OSError("cannot spawn")):
             feedback = AudioFeedback(enabled=True)
@@ -161,7 +161,7 @@ class TestAudioFeedbackBeep:
 
     def test_handles_file_not_found(self):
         """Should handle missing sound file gracefully."""
-        from dictation import AudioFeedback
+        from whisper_dictation.audio_feedback import AudioFeedback
         
         with patch('subprocess.Popen', side_effect=FileNotFoundError("Sound not found")):
             feedback = AudioFeedback(enabled=True)

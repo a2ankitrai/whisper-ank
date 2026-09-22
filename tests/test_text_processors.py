@@ -12,7 +12,7 @@ class TestFillerRemover:
 
     def test_removes_common_fillers(self):
         """Should remove common filler words."""
-        from dictation import FillerRemover
+        from whisper_dictation.text_processors import FillerRemover
         
         remover = FillerRemover()
         
@@ -22,7 +22,7 @@ class TestFillerRemover:
 
     def test_removes_repeated_fillers(self):
         """Should remove repeated filler sounds."""
-        from dictation import FillerRemover
+        from whisper_dictation.text_processors import FillerRemover
         
         remover = FillerRemover()
         
@@ -32,7 +32,7 @@ class TestFillerRemover:
 
     def test_removes_phrase_fillers(self):
         """Should remove filler phrases."""
-        from dictation import FillerRemover
+        from whisper_dictation.text_processors import FillerRemover
         
         remover = FillerRemover()
         
@@ -42,21 +42,21 @@ class TestFillerRemover:
 
     def test_handles_empty_string(self):
         """Should handle empty string."""
-        from dictation import FillerRemover
+        from whisper_dictation.text_processors import FillerRemover
         
         remover = FillerRemover()
         assert remover.process("") == ""
 
     def test_handles_no_fillers(self):
         """Should return unchanged text when no fillers present."""
-        from dictation import FillerRemover
+        from whisper_dictation.text_processors import FillerRemover
         
         remover = FillerRemover()
         assert remover.process("Hello world") == "Hello world"
 
     def test_case_insensitive(self):
         """Should be case insensitive."""
-        from dictation import FillerRemover
+        from whisper_dictation.text_processors import FillerRemover
         
         remover = FillerRemover()
         
@@ -65,7 +65,7 @@ class TestFillerRemover:
 
     def test_cleans_multiple_spaces(self):
         """Should clean up multiple spaces after removal."""
-        from dictation import FillerRemover
+        from whisper_dictation.text_processors import FillerRemover
         
         remover = FillerRemover()
         
@@ -78,7 +78,7 @@ class TestSnippetExpander:
 
     def test_expands_exact_match(self):
         """Should expand exact match snippets."""
-        from dictation import SnippetExpander
+        from whisper_dictation.text_processors import SnippetExpander
         
         snippets = {"signature": "Best regards,\nJohn Doe"}
         expander = SnippetExpander(snippets)
@@ -87,7 +87,7 @@ class TestSnippetExpander:
 
     def test_case_insensitive_match(self):
         """Should match case-insensitively."""
-        from dictation import SnippetExpander
+        from whisper_dictation.text_processors import SnippetExpander
         
         snippets = {"greeting": "Hello!"}
         expander = SnippetExpander(snippets)
@@ -97,7 +97,7 @@ class TestSnippetExpander:
 
     def test_insert_prefix_pattern(self):
         """Should handle 'insert X' pattern."""
-        from dictation import SnippetExpander
+        from whisper_dictation.text_processors import SnippetExpander
         
         snippets = {"address": "123 Main St"}
         expander = SnippetExpander(snippets)
@@ -106,7 +106,7 @@ class TestSnippetExpander:
 
     def test_returns_unchanged_on_no_match(self):
         """Should return unchanged text when no snippet matches."""
-        from dictation import SnippetExpander
+        from whisper_dictation.text_processors import SnippetExpander
         
         snippets = {"greeting": "Hello!"}
         expander = SnippetExpander(snippets)
@@ -115,14 +115,14 @@ class TestSnippetExpander:
 
     def test_handles_empty_string(self):
         """Should handle empty string."""
-        from dictation import SnippetExpander
+        from whisper_dictation.text_processors import SnippetExpander
         
         expander = SnippetExpander({})
         assert expander.process("") == ""
 
     def test_handles_empty_snippets(self):
         """Should work with empty snippets dict."""
-        from dictation import SnippetExpander
+        from whisper_dictation.text_processors import SnippetExpander
         
         expander = SnippetExpander({})
         assert expander.process("hello") == "hello"
@@ -133,14 +133,14 @@ class TestLanguageToolCorrector:
 
     def test_lazy_loading(self):
         """Should not load tool on initialization."""
-        from dictation import LanguageToolCorrector
+        from whisper_dictation.grammar_corrector import LanguageToolCorrector
         
         corrector = LanguageToolCorrector()
         assert corrector._tool is None
 
     def test_handles_empty_string(self):
         """Should handle empty string without loading tool."""
-        from dictation import LanguageToolCorrector
+        from whisper_dictation.grammar_corrector import LanguageToolCorrector
         from unittest.mock import patch, MagicMock
         
         mock_lt = MagicMock()
@@ -154,7 +154,7 @@ class TestLanguageToolCorrector:
 
     def test_calls_tool_correct(self):
         """Should call tool.correct with text."""
-        from dictation import LanguageToolCorrector
+        from whisper_dictation.grammar_corrector import LanguageToolCorrector
         from unittest.mock import patch, MagicMock
         
         mock_tool = MagicMock()
@@ -171,7 +171,7 @@ class TestLanguageToolCorrector:
 
     def test_process_delegates_to_correct(self):
         """Should delegate process() to correct()."""
-        from dictation import LanguageToolCorrector
+        from whisper_dictation.grammar_corrector import LanguageToolCorrector
         from unittest.mock import patch, MagicMock
         
         mock_tool = MagicMock()
@@ -191,14 +191,14 @@ class TestGramformerCorrector:
 
     def test_lazy_loading(self):
         """Should not load model on initialization."""
-        from dictation import GramformerCorrector
+        from whisper_dictation.grammar_corrector import GramformerCorrector
         
         corrector = GramformerCorrector()
         assert corrector._model is None
 
     def test_handles_empty_string(self):
         """Should handle empty string without loading model."""
-        from dictation import GramformerCorrector
+        from whisper_dictation.grammar_corrector import GramformerCorrector
         
         corrector = GramformerCorrector()
         result = corrector.correct("")
@@ -208,7 +208,7 @@ class TestGramformerCorrector:
 
     def test_handles_import_error(self):
         """Should handle missing gramformer gracefully."""
-        from dictation import GramformerCorrector
+        from whisper_dictation.grammar_corrector import GramformerCorrector
         from unittest.mock import patch
         
         with patch.dict(sys.modules, {'gramformer': None}):
@@ -226,35 +226,35 @@ class TestCreateGrammarCorrector:
 
     def test_returns_none_for_none_engine(self):
         """Should return None when engine is None."""
-        from dictation import create_grammar_corrector
+        from whisper_dictation.grammar_corrector import create_grammar_corrector
         
         result = create_grammar_corrector(None)
         assert result is None
 
     def test_creates_languagetool_corrector(self):
         """Should create LanguageToolCorrector for 'languagetool'."""
-        from dictation import create_grammar_corrector, LanguageToolCorrector
+        from whisper_dictation.grammar_corrector import create_grammar_corrector, LanguageToolCorrector
         
         result = create_grammar_corrector("languagetool", "en")
         assert isinstance(result, LanguageToolCorrector)
 
     def test_creates_gramformer_corrector(self):
         """Should create GramformerCorrector for 'gramformer'."""
-        from dictation import create_grammar_corrector, GramformerCorrector
+        from whisper_dictation.grammar_corrector import create_grammar_corrector, GramformerCorrector
         
         result = create_grammar_corrector("gramformer")
         assert isinstance(result, GramformerCorrector)
 
     def test_case_insensitive_engine_name(self):
         """Should handle engine name case-insensitively."""
-        from dictation import create_grammar_corrector, LanguageToolCorrector
+        from whisper_dictation.grammar_corrector import create_grammar_corrector, LanguageToolCorrector
         
         result = create_grammar_corrector("LanguageTool", "en")
         assert isinstance(result, LanguageToolCorrector)
 
     def test_returns_none_for_unknown_engine(self):
         """Should return None for unknown engine."""
-        from dictation import create_grammar_corrector
+        from whisper_dictation.grammar_corrector import create_grammar_corrector
         
         result = create_grammar_corrector("unknown_engine")
         assert result is None

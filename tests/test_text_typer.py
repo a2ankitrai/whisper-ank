@@ -12,10 +12,10 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 class TestTextTyperInit:
     """Test TextTyper initialization."""
 
-    @patch("dictation.CGEventSourceCreate")
+    @patch("whisper_dictation.text_typer.CGEventSourceCreate")
     def test_creates_event_source(self, mock_create_source):
         """Should create CGEvent source on init."""
-        from dictation import TextTyper
+        from whisper_dictation.text_typer import TextTyper
 
         mock_source = MagicMock()
         mock_create_source.return_value = mock_source
@@ -25,15 +25,69 @@ class TestTextTyperInit:
         mock_create_source.assert_called_once()
         assert typer.source == mock_source
 
+    @patch("whisper_dictation.text_typer.CGEventSourceCreate")
+    def test_checks_accessibility_permission(self, mock_create_source):
+        """Should request accessibility permission on init."""
+        with patch(
+            "whisper_dictation.text_typer._ensure_accessibility_permission"
+        ) as mock_ensure:
+            from whisper_dictation.text_typer import TextTyper
+
+            TextTyper()
+
+            mock_ensure.assert_called_once()
+
+
+class TestEnsureAccessibilityPermission:
+    """Test the standalone accessibility permission check."""
+
+    @patch("whisper_dictation.text_typer.AXIsProcessTrustedWithOptions")
+    def test_prompts_with_expected_options(self, mock_check):
+        """Should request the native OS prompt, not a silent check."""
+        from whisper_dictation.text_typer import (
+            _ensure_accessibility_permission,
+            kAXTrustedCheckOptionPrompt,
+        )
+
+        mock_check.return_value = True
+
+        _ensure_accessibility_permission()
+
+        mock_check.assert_called_once_with({kAXTrustedCheckOptionPrompt: True})
+
+    @patch("whisper_dictation.text_typer.AXIsProcessTrustedWithOptions")
+    def test_warns_when_not_trusted(self, mock_check, capsys):
+        """Should print guidance when permission is not granted."""
+        from whisper_dictation.text_typer import _ensure_accessibility_permission
+
+        mock_check.return_value = False
+
+        _ensure_accessibility_permission()
+
+        captured = capsys.readouterr()
+        assert "Accessibility permission" in captured.out
+
+    @patch("whisper_dictation.text_typer.AXIsProcessTrustedWithOptions")
+    def test_silent_when_trusted(self, mock_check, capsys):
+        """Should print nothing when permission is already granted."""
+        from whisper_dictation.text_typer import _ensure_accessibility_permission
+
+        mock_check.return_value = True
+
+        _ensure_accessibility_permission()
+
+        captured = capsys.readouterr()
+        assert captured.out == ""
+
 
 class TestTextTyperTypeText:
     """Test TextTyper text typing functionality."""
 
-    @patch("dictation.time.sleep")
-    @patch("dictation.CGEventPost")
-    @patch("dictation.CGEventKeyboardSetUnicodeString")
-    @patch("dictation.CGEventCreateKeyboardEvent")
-    @patch("dictation.CGEventSourceCreate")
+    @patch("whisper_dictation.text_typer.time.sleep")
+    @patch("whisper_dictation.text_typer.CGEventPost")
+    @patch("whisper_dictation.text_typer.CGEventKeyboardSetUnicodeString")
+    @patch("whisper_dictation.text_typer.CGEventCreateKeyboardEvent")
+    @patch("whisper_dictation.text_typer.CGEventSourceCreate")
     def test_type_text_empty_string(
         self,
         mock_source,
@@ -43,7 +97,7 @@ class TestTextTyperTypeText:
         mock_sleep,
     ):
         """Should do nothing for empty string."""
-        from dictation import TextTyper
+        from whisper_dictation.text_typer import TextTyper
 
         typer = TextTyper()
         typer.type_text("")
@@ -51,11 +105,11 @@ class TestTextTyperTypeText:
         mock_create_event.assert_not_called()
         mock_post.assert_not_called()
 
-    @patch("dictation.time.sleep")
-    @patch("dictation.CGEventPost")
-    @patch("dictation.CGEventKeyboardSetUnicodeString")
-    @patch("dictation.CGEventCreateKeyboardEvent")
-    @patch("dictation.CGEventSourceCreate")
+    @patch("whisper_dictation.text_typer.time.sleep")
+    @patch("whisper_dictation.text_typer.CGEventPost")
+    @patch("whisper_dictation.text_typer.CGEventKeyboardSetUnicodeString")
+    @patch("whisper_dictation.text_typer.CGEventCreateKeyboardEvent")
+    @patch("whisper_dictation.text_typer.CGEventSourceCreate")
     def test_type_text_single_char(
         self,
         mock_source,
@@ -65,7 +119,7 @@ class TestTextTyperTypeText:
         mock_sleep,
     ):
         """Should type single character."""
-        from dictation import TextTyper
+        from whisper_dictation.text_typer import TextTyper
 
         mock_event = MagicMock()
         mock_create_event.return_value = mock_event
@@ -80,11 +134,11 @@ class TestTextTyperTypeText:
         # Should post both events
         assert mock_post.call_count == 2
 
-    @patch("dictation.time.sleep")
-    @patch("dictation.CGEventPost")
-    @patch("dictation.CGEventKeyboardSetUnicodeString")
-    @patch("dictation.CGEventCreateKeyboardEvent")
-    @patch("dictation.CGEventSourceCreate")
+    @patch("whisper_dictation.text_typer.time.sleep")
+    @patch("whisper_dictation.text_typer.CGEventPost")
+    @patch("whisper_dictation.text_typer.CGEventKeyboardSetUnicodeString")
+    @patch("whisper_dictation.text_typer.CGEventCreateKeyboardEvent")
+    @patch("whisper_dictation.text_typer.CGEventSourceCreate")
     def test_type_text_multiple_chars(
         self,
         mock_source,
@@ -94,7 +148,7 @@ class TestTextTyperTypeText:
         mock_sleep,
     ):
         """Should type each character in sequence."""
-        from dictation import TextTyper
+        from whisper_dictation.text_typer import TextTyper
 
         mock_event = MagicMock()
         mock_create_event.return_value = mock_event
@@ -107,11 +161,11 @@ class TestTextTyperTypeText:
         # Should have delays between characters
         assert mock_sleep.call_count == 3
 
-    @patch("dictation.time.sleep")
-    @patch("dictation.CGEventPost")
-    @patch("dictation.CGEventKeyboardSetUnicodeString")
-    @patch("dictation.CGEventCreateKeyboardEvent")
-    @patch("dictation.CGEventSourceCreate")
+    @patch("whisper_dictation.text_typer.time.sleep")
+    @patch("whisper_dictation.text_typer.CGEventPost")
+    @patch("whisper_dictation.text_typer.CGEventKeyboardSetUnicodeString")
+    @patch("whisper_dictation.text_typer.CGEventCreateKeyboardEvent")
+    @patch("whisper_dictation.text_typer.CGEventSourceCreate")
     def test_type_text_unicode(
         self,
         mock_source,
@@ -121,7 +175,7 @@ class TestTextTyperTypeText:
         mock_sleep,
     ):
         """Should handle unicode characters."""
-        from dictation import TextTyper
+        from whisper_dictation.text_typer import TextTyper
 
         mock_event = MagicMock()
         mock_create_event.return_value = mock_event
@@ -132,11 +186,11 @@ class TestTextTyperTypeText:
         # 3 unicode chars
         assert mock_create_event.call_count == 6
 
-    @patch("dictation.time.sleep")
-    @patch("dictation.CGEventPost")
-    @patch("dictation.CGEventKeyboardSetUnicodeString")
-    @patch("dictation.CGEventCreateKeyboardEvent")
-    @patch("dictation.CGEventSourceCreate")
+    @patch("whisper_dictation.text_typer.time.sleep")
+    @patch("whisper_dictation.text_typer.CGEventPost")
+    @patch("whisper_dictation.text_typer.CGEventKeyboardSetUnicodeString")
+    @patch("whisper_dictation.text_typer.CGEventCreateKeyboardEvent")
+    @patch("whisper_dictation.text_typer.CGEventSourceCreate")
     def test_type_text_special_chars(
         self,
         mock_source,
@@ -146,7 +200,7 @@ class TestTextTyperTypeText:
         mock_sleep,
     ):
         """Should handle special characters and punctuation."""
-        from dictation import TextTyper
+        from whisper_dictation.text_typer import TextTyper
 
         mock_event = MagicMock()
         mock_create_event.return_value = mock_event
@@ -158,11 +212,11 @@ class TestTextTyperTypeText:
         expected_char_count = len("Hello, world! How's it going?")
         assert mock_create_event.call_count == expected_char_count * 2
 
-    @patch("dictation.time.sleep")
-    @patch("dictation.CGEventPost")
-    @patch("dictation.CGEventKeyboardSetUnicodeString")
-    @patch("dictation.CGEventCreateKeyboardEvent")
-    @patch("dictation.CGEventSourceCreate")
+    @patch("whisper_dictation.text_typer.time.sleep")
+    @patch("whisper_dictation.text_typer.CGEventPost")
+    @patch("whisper_dictation.text_typer.CGEventKeyboardSetUnicodeString")
+    @patch("whisper_dictation.text_typer.CGEventCreateKeyboardEvent")
+    @patch("whisper_dictation.text_typer.CGEventSourceCreate")
     def test_type_text_newlines(
         self,
         mock_source,
@@ -172,7 +226,7 @@ class TestTextTyperTypeText:
         mock_sleep,
     ):
         """Should handle newline characters."""
-        from dictation import TextTyper
+        from whisper_dictation.text_typer import TextTyper
 
         mock_event = MagicMock()
         mock_create_event.return_value = mock_event
@@ -183,11 +237,11 @@ class TestTextTyperTypeText:
         # 11 chars including newline
         assert mock_create_event.call_count == 22
 
-    @patch("dictation.time.sleep")
-    @patch("dictation.CGEventPost")
-    @patch("dictation.CGEventKeyboardSetUnicodeString")
-    @patch("dictation.CGEventCreateKeyboardEvent")
-    @patch("dictation.CGEventSourceCreate")
+    @patch("whisper_dictation.text_typer.time.sleep")
+    @patch("whisper_dictation.text_typer.CGEventPost")
+    @patch("whisper_dictation.text_typer.CGEventKeyboardSetUnicodeString")
+    @patch("whisper_dictation.text_typer.CGEventCreateKeyboardEvent")
+    @patch("whisper_dictation.text_typer.CGEventSourceCreate")
     def test_type_text_delay_between_chars(
         self,
         mock_source,
@@ -197,7 +251,7 @@ class TestTextTyperTypeText:
         mock_sleep,
     ):
         """Should add delay between characters."""
-        from dictation import TextTyper
+        from whisper_dictation.text_typer import TextTyper
 
         typer = TextTyper()
         typer.type_text("ab")
@@ -207,13 +261,83 @@ class TestTextTyperTypeText:
         mock_sleep.assert_called_with(0.008)
 
 
+class TestTextTyperRuntimePermissionChecks:
+    """Test the per-call warnings that catch mid-session permission loss."""
+
+    @patch("whisper_dictation.text_typer.time.sleep")
+    @patch("whisper_dictation.text_typer.CGEventPost")
+    @patch("whisper_dictation.text_typer.CGEventKeyboardSetUnicodeString")
+    @patch("whisper_dictation.text_typer.CGEventCreateKeyboardEvent")
+    @patch("whisper_dictation.text_typer.CGEventSourceCreate")
+    def test_no_warning_when_healthy(
+        self, mock_source, mock_create_event, mock_set_unicode, mock_post, mock_sleep, capsys
+    ):
+        """Should print nothing when trusted and secure input is off."""
+        from whisper_dictation.text_typer import TextTyper
+
+        typer = TextTyper()
+        typer.type_text("hi")
+
+        assert capsys.readouterr().out == ""
+
+    @patch("whisper_dictation.text_typer.time.sleep")
+    @patch("whisper_dictation.text_typer.CGEventPost")
+    @patch("whisper_dictation.text_typer.CGEventKeyboardSetUnicodeString")
+    @patch("whisper_dictation.text_typer.CGEventCreateKeyboardEvent")
+    @patch("whisper_dictation.text_typer.CGEventSourceCreate")
+    @patch("whisper_dictation.text_typer.AXIsProcessTrusted")
+    def test_warns_when_accessibility_revoked(
+        self, mock_trusted, mock_source, mock_create_event, mock_set_unicode, mock_post, mock_sleep, capsys
+    ):
+        """Should warn when Accessibility trust is lost mid-session."""
+        from whisper_dictation.text_typer import TextTyper
+
+        mock_trusted.return_value = False
+
+        typer = TextTyper()
+        typer.type_text("hi")
+
+        assert "Accessibility permission" in capsys.readouterr().out
+
+    @patch("whisper_dictation.text_typer.time.sleep")
+    @patch("whisper_dictation.text_typer.CGEventPost")
+    @patch("whisper_dictation.text_typer.CGEventKeyboardSetUnicodeString")
+    @patch("whisper_dictation.text_typer.CGEventCreateKeyboardEvent")
+    @patch("whisper_dictation.text_typer.CGEventSourceCreate")
+    @patch("whisper_dictation.text_typer._frontmost_app_name")
+    @patch("whisper_dictation.text_typer._carbon")
+    def test_warns_when_secure_input_enabled(
+        self,
+        mock_carbon,
+        mock_frontmost,
+        mock_source,
+        mock_create_event,
+        mock_set_unicode,
+        mock_post,
+        mock_sleep,
+        capsys,
+    ):
+        """Should warn, naming the frontmost app, when Secure Input is on."""
+        from whisper_dictation.text_typer import TextTyper
+
+        mock_carbon.IsSecureEventInputEnabled.return_value = True
+        mock_frontmost.return_value = "1Password"
+
+        typer = TextTyper()
+        typer.type_text("hi")
+
+        out = capsys.readouterr().out
+        assert "Secure Keyboard Entry" in out
+        assert "1Password" in out
+
+
 class TestTextTyperTypeChar:
     """Test TextTyper single character typing."""
 
-    @patch("dictation.CGEventPost")
-    @patch("dictation.CGEventKeyboardSetUnicodeString")
-    @patch("dictation.CGEventCreateKeyboardEvent")
-    @patch("dictation.CGEventSourceCreate")
+    @patch("whisper_dictation.text_typer.CGEventPost")
+    @patch("whisper_dictation.text_typer.CGEventKeyboardSetUnicodeString")
+    @patch("whisper_dictation.text_typer.CGEventCreateKeyboardEvent")
+    @patch("whisper_dictation.text_typer.CGEventSourceCreate")
     def test_type_char_creates_down_and_up_events(
         self,
         mock_source,
@@ -222,7 +346,7 @@ class TestTextTyperTypeChar:
         mock_post,
     ):
         """Should create both key down and key up events."""
-        from dictation import TextTyper
+        from whisper_dictation.text_typer import TextTyper
 
         mock_down = MagicMock()
         mock_up = MagicMock()
@@ -237,10 +361,10 @@ class TestTextTyperTypeChar:
         assert calls[0][0][2] is True  # key down
         assert calls[1][0][2] is False  # key up
 
-    @patch("dictation.CGEventPost")
-    @patch("dictation.CGEventKeyboardSetUnicodeString")
-    @patch("dictation.CGEventCreateKeyboardEvent")
-    @patch("dictation.CGEventSourceCreate")
+    @patch("whisper_dictation.text_typer.CGEventPost")
+    @patch("whisper_dictation.text_typer.CGEventKeyboardSetUnicodeString")
+    @patch("whisper_dictation.text_typer.CGEventCreateKeyboardEvent")
+    @patch("whisper_dictation.text_typer.CGEventSourceCreate")
     def test_type_char_sets_unicode_on_both_events(
         self,
         mock_source,
@@ -249,7 +373,7 @@ class TestTextTyperTypeChar:
         mock_post,
     ):
         """Should set unicode string on both events."""
-        from dictation import TextTyper
+        from whisper_dictation.text_typer import TextTyper
 
         mock_down = MagicMock()
         mock_up = MagicMock()
@@ -263,10 +387,10 @@ class TestTextTyperTypeChar:
         mock_set_unicode.assert_any_call(mock_down, 1, "é")
         mock_set_unicode.assert_any_call(mock_up, 1, "é")
 
-    @patch("dictation.CGEventPost")
-    @patch("dictation.CGEventKeyboardSetUnicodeString")
-    @patch("dictation.CGEventCreateKeyboardEvent")
-    @patch("dictation.CGEventSourceCreate")
+    @patch("whisper_dictation.text_typer.CGEventPost")
+    @patch("whisper_dictation.text_typer.CGEventKeyboardSetUnicodeString")
+    @patch("whisper_dictation.text_typer.CGEventCreateKeyboardEvent")
+    @patch("whisper_dictation.text_typer.CGEventSourceCreate")
     def test_type_char_posts_events_to_hid_tap(
         self,
         mock_source,
@@ -275,7 +399,7 @@ class TestTextTyperTypeChar:
         mock_post,
     ):
         """Should post events to HID event tap."""
-        from dictation import TextTyper, kCGHIDEventTap
+        from whisper_dictation.text_typer import TextTyper, kCGHIDEventTap
 
         mock_down = MagicMock()
         mock_up = MagicMock()
@@ -289,11 +413,11 @@ class TestTextTyperTypeChar:
         mock_post.assert_any_call(kCGHIDEventTap, mock_down)
         mock_post.assert_any_call(kCGHIDEventTap, mock_up)
 
-    @patch("dictation.CGEventSetFlags")
-    @patch("dictation.CGEventPost")
-    @patch("dictation.CGEventKeyboardSetUnicodeString")
-    @patch("dictation.CGEventCreateKeyboardEvent")
-    @patch("dictation.CGEventSourceCreate")
+    @patch("whisper_dictation.text_typer.CGEventSetFlags")
+    @patch("whisper_dictation.text_typer.CGEventPost")
+    @patch("whisper_dictation.text_typer.CGEventKeyboardSetUnicodeString")
+    @patch("whisper_dictation.text_typer.CGEventCreateKeyboardEvent")
+    @patch("whisper_dictation.text_typer.CGEventSourceCreate")
     def test_type_char_clears_modifier_flags(
         self,
         mock_source,
@@ -308,7 +432,7 @@ class TestTextTyperTypeChar:
         Cmd/Shift again; without clearing the flags the characters would be
         delivered as keyboard shortcuts.
         """
-        from dictation import TextTyper
+        from whisper_dictation.text_typer import TextTyper
 
         mock_down = MagicMock()
         mock_up = MagicMock()

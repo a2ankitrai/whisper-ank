@@ -11,7 +11,7 @@ import pytest
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from dictation import AudioRecorder
+from whisper_dictation.audio_recorder import AudioRecorder
 
 
 class TestAudioRecorderInit:
@@ -38,7 +38,7 @@ class TestAudioRecorderInit:
 class TestAudioRecorderStartStop:
     """Test AudioRecorder start/stop functionality."""
 
-    @patch("dictation.sd.InputStream")
+    @patch("whisper_dictation.audio_recorder.sd.InputStream")
     def test_start_sets_recording_flag(self, mock_input_stream):
         """Should set recording flag to True when started."""
         mock_stream = MagicMock()
@@ -50,7 +50,7 @@ class TestAudioRecorderStartStop:
         assert recorder.recording is True
         mock_stream.start.assert_called_once()
 
-    @patch("dictation.sd.InputStream")
+    @patch("whisper_dictation.audio_recorder.sd.InputStream")
     def test_start_clears_previous_chunks(self, mock_input_stream):
         """Should clear audio chunks when starting new recording."""
         mock_stream = MagicMock()
@@ -62,7 +62,7 @@ class TestAudioRecorderStartStop:
 
         assert recorder.audio_chunks == []
 
-    @patch("dictation.sd.InputStream")
+    @patch("whisper_dictation.audio_recorder.sd.InputStream")
     def test_start_creates_input_stream(self, mock_input_stream):
         """Should create InputStream with correct parameters."""
         mock_stream = MagicMock()
@@ -77,7 +77,7 @@ class TestAudioRecorderStartStop:
         assert call_kwargs["channels"] == 1
         assert call_kwargs["dtype"] == "float32"
 
-    @patch("dictation.sd.InputStream")
+    @patch("whisper_dictation.audio_recorder.sd.InputStream")
     def test_stop_returns_none_when_no_audio(self, mock_input_stream):
         """Should return None when no audio was recorded."""
         mock_stream = MagicMock()
@@ -89,7 +89,7 @@ class TestAudioRecorderStartStop:
 
         assert result is None
 
-    @patch("dictation.sd.InputStream")
+    @patch("whisper_dictation.audio_recorder.sd.InputStream")
     def test_stop_returns_concatenated_audio(self, mock_input_stream):
         """Should return concatenated audio data."""
         mock_stream = MagicMock()
@@ -110,7 +110,7 @@ class TestAudioRecorderStartStop:
         assert len(result) == 4
         np.testing.assert_array_almost_equal(result, [0.1, 0.2, 0.3, 0.4])
 
-    @patch("dictation.sd.InputStream")
+    @patch("whisper_dictation.audio_recorder.sd.InputStream")
     def test_stop_keeps_stream_open(self, mock_input_stream):
         """Stop must not tear the stream down.
 
@@ -128,7 +128,7 @@ class TestAudioRecorderStartStop:
         mock_stream.close.assert_not_called()
         assert recorder.stream is mock_stream
 
-    @patch("dictation.sd.InputStream")
+    @patch("whisper_dictation.audio_recorder.sd.InputStream")
     def test_reuses_single_stream_across_recordings(self, mock_input_stream):
         """Repeated recordings should reuse one long-lived stream."""
         mock_stream = MagicMock()
@@ -142,7 +142,7 @@ class TestAudioRecorderStartStop:
         assert mock_input_stream.call_count == 1
         assert mock_stream.start.call_count == 1
 
-    @patch("dictation.sd.InputStream")
+    @patch("whisper_dictation.audio_recorder.sd.InputStream")
     def test_replaces_dead_stream(self, mock_input_stream):
         """A stream that went inactive (device unplugged) is replaced."""
         dead_stream = MagicMock()
@@ -159,7 +159,7 @@ class TestAudioRecorderStartStop:
         assert recorder.stream is fresh_stream
         assert mock_input_stream.call_count == 2
 
-    @patch("dictation.sd.InputStream")
+    @patch("whisper_dictation.audio_recorder.sd.InputStream")
     def test_close_survives_hanging_stream(self, mock_input_stream):
         """A stream that never returns must not block shutdown."""
         import threading
@@ -183,7 +183,7 @@ class TestAudioRecorderStartStop:
         finally:
             block.set()
 
-    @patch("dictation.sd.InputStream")
+    @patch("whisper_dictation.audio_recorder.sd.InputStream")
     def test_stop_sets_recording_flag_false(self, mock_input_stream):
         """Should set recording flag to False when stopped."""
         mock_stream = MagicMock()
@@ -199,7 +199,7 @@ class TestAudioRecorderStartStop:
 class TestAudioRecorderCallback:
     """Test AudioRecorder audio callback."""
 
-    @patch("dictation.sd.InputStream")
+    @patch("whisper_dictation.audio_recorder.sd.InputStream")
     def test_callback_stores_audio_when_recording(self, mock_input_stream):
         """Should store audio data when recording."""
         recorder = AudioRecorder()
@@ -211,7 +211,7 @@ class TestAudioRecorderCallback:
         assert len(recorder.audio_chunks) == 1
         np.testing.assert_array_equal(recorder.audio_chunks[0], indata)
 
-    @patch("dictation.sd.InputStream")
+    @patch("whisper_dictation.audio_recorder.sd.InputStream")
     def test_callback_ignores_audio_when_not_recording(self, mock_input_stream):
         """Should ignore audio data when not recording."""
         recorder = AudioRecorder()
@@ -222,7 +222,7 @@ class TestAudioRecorderCallback:
 
         assert len(recorder.audio_chunks) == 0
 
-    @patch("dictation.sd.InputStream")
+    @patch("whisper_dictation.audio_recorder.sd.InputStream")
     def test_callback_copies_data(self, mock_input_stream):
         """Should make a copy of audio data, not reference."""
         recorder = AudioRecorder()

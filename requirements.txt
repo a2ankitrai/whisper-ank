@@ -5,6 +5,8 @@ sounddevice
 numpy
 pynput
 pyobjc-framework-Quartz
+pyobjc-framework-ApplicationServices
+pyobjc-framework-Cocoa
 
 # Grammar correction
 language-tool-python
