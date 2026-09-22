@@ -80,6 +80,10 @@ class DictationApp:
         self.processing_threads: list[threading.Thread] = []
         self.command_started_at: tuple[float, str] | None = None
 
+        self.listener = None
+        self.listener_started_at: float | None = None
+        self._last_stall_warning: float | None = None
+
     def _build_pipeline(self, config: DictationConfig) -> None:
         """(Re)build the transcriber and text-processing pipeline from config.
 
@@ -433,26 +437,8 @@ class DictationApp:
         sys.stderr.flush()
         os._exit(1)
 
-    def run(self):
-        """Run the dictation app."""
-        # Dump every thread's stack on SIGUSR1 (`kill -USR1 <pid>`) so a hang
-        # can be diagnosed from dictation.log instead of guessed at.
-        faulthandler.enable()
-        try:
-            faulthandler.register(signal.SIGUSR1, all_threads=True, chain=False)
-        except Exception:
-            pass
-
-        # Ignore SIGHUP so the process survives terminal disconnects when
-        # launched in the background, and shut down cleanly on SIGTERM.
-        try:
-            signal.signal(signal.SIGHUP, self._handle_signal)
-            signal.signal(signal.SIGTERM, self._handle_signal)
-        except ValueError:
-            # Signals can only be registered from the main thread
-            pass
-
-        # Build hotkey display strings
+    def _print_banner(self) -> None:
+        """Print the startup banner (hotkeys, active features)."""
         hotkey_display = "+".join(k.capitalize() for k in sorted(self.hotkey))
         replay_modifiers, replay_key = self.replay_hotkey
         replay_display = "+".join(
@@ -471,7 +457,6 @@ class DictationApp:
         print("Press Escape to quit")
         print("-" * 60)
 
-        # Show active features
         features = []
         if self.config.multilingual:
             features.append("Multilingual (code-mixing)")
@@ -505,62 +490,101 @@ class DictationApp:
         print("=" * 60)
         print("\n🎯 Ready...\n")
 
+    def start_background(self) -> None:
+        """Start the worker thread and keyboard listener; returns immediately.
+
+        Shared by headless run() and GUI mode: MenuBarApp calls this, then
+        takes the main thread's Cocoa run loop itself instead of running
+        the polling loop below.
+        """
+        faulthandler.enable()
+        try:
+            faulthandler.register(signal.SIGUSR1, all_threads=True, chain=False)
+        except Exception:
+            pass
+
+        try:
+            signal.signal(signal.SIGHUP, self._handle_signal)
+            signal.signal(signal.SIGTERM, self._handle_signal)
+        except ValueError:
+            # Signals can only be registered from the main thread
+            pass
+
+        self._print_banner()
+
         listener_cls = _resilient_listener_class()
         self.worker = threading.Thread(target=self._worker_loop, daemon=True)
         self.worker.start()
 
-        listener = listener_cls(
+        self.listener = listener_cls(
             on_press=self._on_press,
             on_release=self._on_release,
         )
-        listener.start()
-        listener_started_at = time.monotonic()
+        self.listener.start()
+        self.listener_started_at = time.monotonic()
+        self.listener.wait()
+
+    def poll_health(self) -> None:
+        """One iteration of periodic health-check work.
+
+        Shared by run()'s headless polling loop and MenuBarApp's
+        rumps.Timer — exactly one of those two drives it in a given run,
+        they are mutually exclusive main-thread owners.
+        """
+        if not self.listener.running:
+            # The listener thread died (permissions revoked, tap creation
+            # failed); rebuild it instead of going silent.
+            print("⚠️  Keyboard listener stopped, restarting it...")
+            try:
+                self.listener.stop()
+            except Exception:
+                pass
+            listener_cls = _resilient_listener_class()
+            self.listener = listener_cls(
+                on_press=self._on_press,
+                on_release=self._on_release,
+            )
+            self.listener.start()
+            self.listener_started_at = time.monotonic()
+            self.last_event_at = None
+            self._no_events_warned_at = None
+            self.listener.wait()
+            self._resync_modifiers()
+            return
+
+        if self.listener.ensure_tap_enabled():
+            print("⚠️  Event tap was disabled by macOS, re-enabled it")
+
+        self._resync_modifiers()
+        self._check_event_flow(self.listener_started_at)
+
+        started = self.command_started_at
+        if started:
+            now = time.monotonic()
+            if now - started[0] > 5:
+                if (
+                    self._last_stall_warning is None
+                    or now - self._last_stall_warning > 10
+                ):
+                    self._last_stall_warning = now
+                    print(
+                        f"⚠️  Audio command '{started[1]}' has been "
+                        f"stuck for {now - started[0]:.0f}s "
+                        f"(send SIGUSR1 to this PID for a stack dump)",
+                        file=sys.stderr,
+                    )
+
+    def run(self) -> None:
+        """Run headless (no GUI): start background threads, then poll forever."""
+        self.start_background()
         try:
-            listener.wait()
             last_health_check = 0.0
-            last_stall_warning = 0.0
             while self.running:
                 time.sleep(0.1)
-
-                if not listener.running:
-                    # The listener thread died (permissions revoked, tap
-                    # creation failed); rebuild it instead of going silent.
-                    print("⚠️  Keyboard listener stopped, restarting it...")
-                    try:
-                        listener.stop()
-                    except Exception:
-                        pass
-                    listener = listener_cls(
-                        on_press=self._on_press,
-                        on_release=self._on_release,
-                    )
-                    listener.start()
-                    listener_started_at = time.monotonic()
-                    self.last_event_at = None
-                    self._no_events_warned_at = None
-                    listener.wait()
-                    self._resync_modifiers()
-                    continue
-
-                if listener.ensure_tap_enabled():
-                    print("⚠️  Event tap was disabled by macOS, re-enabled it")
-
                 now = time.monotonic()
                 if now - last_health_check >= 0.5:
                     last_health_check = now
-                    self._resync_modifiers()
-                    self._check_event_flow(listener_started_at)
-
-                    started = self.command_started_at
-                    if started and now - started[0] > 5:
-                        if now - last_stall_warning > 10:
-                            last_stall_warning = now
-                            print(
-                                f"⚠️  Audio command '{started[1]}' has been "
-                                f"stuck for {now - started[0]:.0f}s "
-                                f"(send SIGUSR1 to this PID for a stack dump)",
-                                file=sys.stderr,
-                            )
+                    self.poll_health()
         except Exception as e:
             print(f"\n❌ Listener error: {e}", file=sys.stderr)
             print(
@@ -571,7 +595,7 @@ class DictationApp:
         finally:
             self.running = False
             try:
-                listener.stop()
+                self.listener.stop()
             except Exception:
                 pass
             if self.worker:

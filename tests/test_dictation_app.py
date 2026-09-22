@@ -787,6 +787,70 @@ class TestDictationAppApplyConfig:
         assert app.config.model_size == "base"  # unchanged
 
 
+class TestDictationAppBackgroundLifecycle:
+    """Tests for start_background()/poll_health() (GUI/headless shared plumbing)."""
+
+    def _make_app(self):
+        from whisper_dictation.config import DictationConfig
+        from whisper_dictation.dictation_app import DictationApp
+
+        with patch("whisper_dictation.dictation_app.AudioFeedback"), \
+             patch("whisper_dictation.dictation_app.TextTyper"), \
+             patch("whisper_dictation.dictation_app.Transcriber"), \
+             patch("whisper_dictation.dictation_app.AudioRecorder"):
+            return DictationApp(config=DictationConfig())
+
+    @patch("whisper_dictation.dictation_app._resilient_listener_class")
+    def test_start_background_starts_worker_and_listener(self, mock_listener_cls):
+        app = self._make_app()
+        fake_listener = MagicMock()
+        fake_listener.running = True
+        mock_listener_cls.return_value = MagicMock(return_value=fake_listener)
+
+        app.start_background()
+        try:
+            assert app.worker.is_alive()
+            assert app.listener is fake_listener
+            fake_listener.start.assert_called_once()
+            fake_listener.wait.assert_called_once()
+        finally:
+            app.running = False
+            app.worker.join(timeout=2)
+
+    @patch("whisper_dictation.dictation_app.live_modifiers", return_value=set())
+    @patch("whisper_dictation.dictation_app._resilient_listener_class")
+    def test_poll_health_rebuilds_dead_listener(self, mock_listener_cls, mock_live_modifiers):
+        app = self._make_app()
+        dead_listener = MagicMock()
+        dead_listener.running = False
+        new_listener = MagicMock()
+        new_listener.running = True
+        mock_listener_cls.return_value = MagicMock(side_effect=[new_listener])
+        app.listener = dead_listener
+        app.listener_started_at = time.monotonic()
+
+        app.poll_health()
+
+        dead_listener.stop.assert_called_once()
+        assert app.listener is new_listener
+        new_listener.start.assert_called_once()
+
+    @patch("whisper_dictation.dictation_app.live_modifiers", return_value=set())
+    def test_poll_health_warns_on_stalled_command(self, mock_live_modifiers, capsys):
+        app = self._make_app()
+        alive_listener = MagicMock()
+        alive_listener.running = True
+        alive_listener.ensure_tap_enabled.return_value = False
+        app.listener = alive_listener
+        app.listener_started_at = time.monotonic()
+        app.command_started_at = (time.monotonic() - 6, "start")
+
+        app.poll_health()
+
+        captured = capsys.readouterr()
+        assert "stuck for" in captured.err
+
+
 class TestDictationAppThreadSafety:
     """Test thread safety of DictationApp."""
 
