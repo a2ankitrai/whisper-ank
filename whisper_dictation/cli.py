@@ -7,7 +7,17 @@ import os
 import sys
 
 from .config import DictationConfig
+from .config_store import ConfigStore
 from .dictation_app import DictationApp
+
+
+def _config_flags_passed(argv: list[str]) -> bool:
+    """True if the user passed a config-affecting CLI flag.
+
+    `--no-gui` doesn't count: it's a run-mode switch, not a config field,
+    so a bare `--no-gui` still loads the saved config file.
+    """
+    return any(arg != "--no-gui" for arg in argv[1:])
 
 
 def main():
@@ -24,6 +34,7 @@ Examples:
   python dictation.py --hotwords "OpenAI,Whisper,GitHub"
   python dictation.py --hotkey ctrl+shift      # Custom hotkey
   python dictation.py --recording-mode toggle  # Press once to start/stop
+  python dictation.py --no-gui                # Headless, no menu bar app
         """
     )
 
@@ -117,11 +128,22 @@ Examples:
             "(default: cmd+shift+v)"
         ),
     )
+    parser.add_argument(
+        "--no-gui",
+        action="store_true",
+        help=(
+            "Run headless (console only), skipping the menu bar app. "
+            "Ignores the saved config file if any other flag is also passed."
+        ),
+    )
 
     args = parser.parse_args()
 
     try:
-        config = DictationConfig.from_args(args)
+        if _config_flags_passed(sys.argv):
+            config = DictationConfig.from_args(args)
+        else:
+            config = ConfigStore().load() or DictationConfig.from_args(args)
     except ValueError as e:
         parser.error(str(e))
 
@@ -131,7 +153,12 @@ Examples:
     exit_code = 0
     try:
         app = DictationApp(config=config)
-        app.run()
+        if args.no_gui:
+            app.run()
+        else:
+            from .menu_bar_app import MenuBarApp
+
+            MenuBarApp(app).run()
     except KeyboardInterrupt:
         print("\n👋 Goodbye!")
     except Exception as e:
