@@ -9,6 +9,8 @@ around it.
 
 from __future__ import annotations
 
+import threading
+
 import objc
 from AppKit import (
     NSApp,
@@ -25,6 +27,7 @@ from AppKit import (
     NSTitledWindowMask,
     NSWindow,
 )
+from PyObjCTools import AppHelper
 
 from .config_store import ConfigStore
 from .dictation_app import DictationApp
@@ -136,6 +139,7 @@ class SettingsWindow(NSObject):
         save_button.setTarget_(self)
         save_button.setAction_("save:")
         content.addSubview_(save_button)
+        self.save_button = save_button
 
     def _add_label(self, content, y, text):
         label = NSTextField.alloc().initWithFrame_(NSMakeRect(20, y, LABEL_WIDTH, 20))
@@ -204,15 +208,35 @@ class SettingsWindow(NSObject):
             self.status_field.setStringValue_(f"⚠️ {e}")
             return
 
+        # apply_config() can trigger a Transcriber reload, which loads (and,
+        # on first use of a given model size, downloads) a Whisper model —
+        # this can take anywhere from seconds to minutes. Running it here,
+        # on the main thread, would block the whole Cocoa run loop for that
+        # entire time: the window (and the rumps menu bar, which shares this
+        # thread) would stop responding to any input, with no way to tell
+        # that from "crashed". Do the apply on a background thread instead
+        # and hop back to the main thread only to update the UI.
         self.status_field.setStringValue_("Applying…")
-        try:
-            self.dictation_app.apply_config(new_config)
-        except Exception as e:
-            self.status_field.setStringValue_(f"⚠️ Could not apply: {e}")
-            return
+        self.save_button.setEnabled_(False)
 
-        ConfigStore().save(new_config)
+        def apply_in_background():
+            try:
+                self.dictation_app.apply_config(new_config)
+                ConfigStore().save(new_config)
+            except Exception as e:
+                AppHelper.callAfter(self._on_apply_failed, e)
+            else:
+                AppHelper.callAfter(self._on_apply_succeeded)
+
+        threading.Thread(target=apply_in_background, daemon=True).start()
+
+    def _on_apply_succeeded(self) -> None:
         self.status_field.setStringValue_("Saved.")
+        self.save_button.setEnabled_(True)
+
+    def _on_apply_failed(self, error: Exception) -> None:
+        self.status_field.setStringValue_(f"⚠️ Could not apply: {error}")
+        self.save_button.setEnabled_(True)
 
     def show(self) -> None:
         self.window.makeKeyAndOrderFront_(None)
