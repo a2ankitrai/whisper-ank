@@ -439,6 +439,60 @@ class TestDictationConfigReplayHotkey:
             DictationConfig._parse_replay_hotkey("cmd+shift+alt")
 
 
+class TestDictationConfigJsonRoundTrip:
+    """Tests for to_json_dict()/from_json_dict()."""
+
+    def test_default_config_round_trips(self):
+        from whisper_dictation.config import DictationConfig
+
+        config = DictationConfig()
+        restored = DictationConfig.from_json_dict(config.to_json_dict())
+
+        assert restored == config
+
+    def test_custom_config_round_trips(self):
+        from whisper_dictation.config import DictationConfig
+
+        config = DictationConfig(
+            model_size="small",
+            language="nl",
+            grammar_engine="languagetool",
+            translate_to_english=True,
+            target_language="de",
+            multilingual=True,
+            remove_fillers=False,
+            hotwords=["OpenAI", "Whisper"],
+            snippets={"sig": "Best, Ankit"},
+            audio_feedback=False,
+            hotkey={"ctrl", "alt"},
+            recording_mode="toggle",
+            replay_hotkey=(frozenset({"ctrl"}), "r"),
+        )
+
+        restored = DictationConfig.from_json_dict(config.to_json_dict())
+
+        assert restored == config
+
+    def test_to_json_dict_is_json_serializable(self):
+        import json
+
+        from whisper_dictation.config import DictationConfig
+
+        config = DictationConfig()
+        # Must not raise: sets/frozensets aren't directly JSON-serializable,
+        # to_json_dict() must have already converted them.
+        json.dumps(config.to_json_dict())
+
+    def test_from_json_dict_fills_in_missing_keys_with_defaults(self):
+        from whisper_dictation.config import DictationConfig
+
+        restored = DictationConfig.from_json_dict({"model_size": "tiny"})
+
+        assert restored.model_size == "tiny"
+        assert restored.hotkey == {"cmd", "shift"}
+        assert restored.replay_hotkey == (frozenset({"cmd", "shift"}), "v")
+
+
 class TestDictationConfigLoadSnippets:
     """Tests for snippet file loading."""
 

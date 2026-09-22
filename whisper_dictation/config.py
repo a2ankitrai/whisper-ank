@@ -79,6 +79,51 @@ class DictationConfig:
 
         return config
 
+    def to_json_dict(self) -> dict:
+        """Serialize to a JSON-compatible dict (used by ConfigStore)."""
+        modifiers, key = self.replay_hotkey
+        return {
+            "model_size": self.model_size,
+            "language": self.language,
+            "grammar_engine": self.grammar_engine,
+            "translate_to_english": self.translate_to_english,
+            "target_language": self.target_language,
+            "multilingual": self.multilingual,
+            "remove_fillers": self.remove_fillers,
+            "hotwords": list(self.hotwords),
+            "snippets": dict(self.snippets),
+            "audio_feedback": self.audio_feedback,
+            "hotkey": sorted(self.hotkey),
+            "recording_mode": self.recording_mode,
+            "replay_hotkey": {"modifiers": sorted(modifiers), "key": key},
+        }
+
+    @classmethod
+    def from_json_dict(cls, data: dict) -> "DictationConfig":
+        """Build a config from a dict produced by to_json_dict()."""
+        defaults = cls()
+        config = cls(
+            model_size=data.get("model_size", defaults.model_size),
+            language=data.get("language", defaults.language),
+            grammar_engine=data.get("grammar_engine", defaults.grammar_engine),
+            translate_to_english=data.get(
+                "translate_to_english", defaults.translate_to_english
+            ),
+            target_language=data.get("target_language", defaults.target_language),
+            multilingual=data.get("multilingual", defaults.multilingual),
+            remove_fillers=data.get("remove_fillers", defaults.remove_fillers),
+            hotwords=list(data.get("hotwords", defaults.hotwords)),
+            snippets=dict(data.get("snippets", defaults.snippets)),
+            audio_feedback=data.get("audio_feedback", defaults.audio_feedback),
+            recording_mode=data.get("recording_mode", defaults.recording_mode),
+        )
+        if "hotkey" in data:
+            config.hotkey = set(data["hotkey"])
+        if "replay_hotkey" in data:
+            replay = data["replay_hotkey"]
+            config.replay_hotkey = (frozenset(replay["modifiers"]), replay["key"])
+        return config
+
     @staticmethod
     def _parse_hotkey(spec: str) -> set[str]:
         """Parse a "cmd+shift" style hotkey spec into modifier names.
