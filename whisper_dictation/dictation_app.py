@@ -46,43 +46,9 @@ class DictationApp:
 
         # Core components
         self.recorder = AudioRecorder()
-        self.transcriber = Transcriber(
-            model_size=config.model_size,
-            language=config.language,
-            translate=config.translate_to_english,
-            multilingual=config.multilingual,
-            hotwords=config.hotwords,
-        )
         self.typer = TextTyper()
         self.audio_feedback = AudioFeedback(enabled=config.audio_feedback)
-
-        # Build text processing pipeline
-        self.processors: list[TextProcessor] = []
-
-        # 1. Filler removal (first, to clean up raw transcription)
-        if config.remove_fillers:
-            self.processors.append(FillerRemover())
-
-        # 2. Snippet expansion
-        if config.snippets:
-            self.processors.append(SnippetExpander(config.snippets))
-
-        # 3. Grammar correction
-        self.grammar_corrector = create_grammar_corrector(
-            config.grammar_engine,
-            config.language or "en"
-        )
-        if self.grammar_corrector:
-            self.processors.append(self.grammar_corrector)
-
-        # 4. Translation (English → target language)
-        self.translator: Translator | None = None
-        if config.target_language:
-            self.translator = ArgosTranslator(
-                source_lang="en",
-                target_lang=config.target_language
-            )
-            self.processors.append(self.translator)
+        self._build_pipeline(config)
 
         # Legacy compatibility
         self.enable_grammar = config.grammar_engine is not None
@@ -113,6 +79,71 @@ class DictationApp:
         self.worker: threading.Thread | None = None
         self.processing_threads: list[threading.Thread] = []
         self.command_started_at: tuple[float, str] | None = None
+
+    def _build_pipeline(self, config: DictationConfig) -> None:
+        """(Re)build the transcriber and text-processing pipeline from config.
+
+        Builds everything into local variables first and only assigns to
+        `self` once all construction succeeds, so a failure (e.g. an
+        invalid model size) never leaves the app with a half-updated
+        pipeline — see apply_config().
+        """
+        transcriber = Transcriber(
+            model_size=config.model_size,
+            language=config.language,
+            translate=config.translate_to_english,
+            multilingual=config.multilingual,
+            hotwords=config.hotwords,
+        )
+
+        processors: list[TextProcessor] = []
+
+        # 1. Filler removal (first, to clean up raw transcription)
+        if config.remove_fillers:
+            processors.append(FillerRemover())
+
+        # 2. Snippet expansion
+        if config.snippets:
+            processors.append(SnippetExpander(config.snippets))
+
+        # 3. Grammar correction
+        grammar_corrector = create_grammar_corrector(
+            config.grammar_engine,
+            config.language or "en"
+        )
+        if grammar_corrector:
+            processors.append(grammar_corrector)
+
+        # 4. Translation (English → target language)
+        translator: Translator | None = None
+        if config.target_language:
+            translator = ArgosTranslator(
+                source_lang="en",
+                target_lang=config.target_language
+            )
+            processors.append(translator)
+
+        self.transcriber = transcriber
+        self.processors = processors
+        self.grammar_corrector = grammar_corrector
+        self.translator = translator
+
+    def apply_config(self, new_config: DictationConfig) -> None:
+        """Apply a changed config to the running app without a restart.
+
+        Rebuilds the (possibly slow, possibly failing) pipeline first;
+        only if that succeeds do the cheap live attributes and self.config
+        get updated, so a bad config never leaves the app half-changed.
+        """
+        self._build_pipeline(new_config)
+
+        with self.lock:
+            self.hotkey = new_config.hotkey
+            self.recording_mode = new_config.recording_mode
+            self.replay_hotkey = new_config.replay_hotkey
+            self.audio_feedback.enabled = new_config.audio_feedback
+
+        self.config = new_config
 
     # -- Worker -------------------------------------------------------------
 

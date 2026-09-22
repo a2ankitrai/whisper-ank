@@ -700,6 +700,93 @@ class TestDictationAppReplay:
         assert app.commands.empty()
 
 
+class TestDictationAppApplyConfig:
+    """Tests for apply_config() (live settings updates)."""
+
+    def _make_app(self, **config_kwargs):
+        from whisper_dictation.config import DictationConfig
+        from whisper_dictation.dictation_app import DictationApp
+
+        with patch("whisper_dictation.dictation_app.AudioFeedback"), \
+             patch("whisper_dictation.dictation_app.TextTyper"), \
+             patch("whisper_dictation.dictation_app.Transcriber"), \
+             patch("whisper_dictation.dictation_app.AudioRecorder"):
+            return DictationApp(config=DictationConfig(**config_kwargs))
+
+    def test_updates_hotkey_recording_mode_and_replay_hotkey(self):
+        from whisper_dictation.config import DictationConfig
+
+        app = self._make_app()
+        new_config = DictationConfig(
+            hotkey={"ctrl", "alt"},
+            recording_mode="toggle",
+            replay_hotkey=(frozenset({"ctrl"}), "r"),
+        )
+
+        with patch("whisper_dictation.dictation_app.Transcriber"):
+            app.apply_config(new_config)
+
+        assert app.hotkey == {"ctrl", "alt"}
+        assert app.recording_mode == "toggle"
+        assert app.replay_hotkey == (frozenset({"ctrl"}), "r")
+        assert app.config == new_config
+
+    def test_updates_audio_feedback_enabled_flag(self):
+        from whisper_dictation.config import DictationConfig
+
+        app = self._make_app(audio_feedback=True)
+        new_config = DictationConfig(audio_feedback=False)
+
+        with patch("whisper_dictation.dictation_app.Transcriber"):
+            app.apply_config(new_config)
+
+        assert app.audio_feedback.enabled is False
+
+    @patch("whisper_dictation.dictation_app.Transcriber")
+    def test_rebuilds_transcriber_with_new_model_settings(self, mock_transcriber_cls):
+        from whisper_dictation.config import DictationConfig
+
+        app = self._make_app()
+        new_config = DictationConfig(model_size="large-v3", language="nl")
+
+        app.apply_config(new_config)
+
+        call_kwargs = mock_transcriber_cls.call_args[1]
+        assert call_kwargs["model_size"] == "large-v3"
+        assert call_kwargs["language"] == "nl"
+
+    @patch("whisper_dictation.dictation_app.create_grammar_corrector")
+    @patch("whisper_dictation.dictation_app.Transcriber")
+    def test_rebuilds_grammar_corrector(self, mock_transcriber_cls, mock_create_corrector):
+        from whisper_dictation.config import DictationConfig
+
+        mock_corrector = MagicMock()
+        mock_create_corrector.return_value = mock_corrector
+        app = self._make_app()
+        new_config = DictationConfig(grammar_engine="languagetool")
+
+        app.apply_config(new_config)
+
+        assert app.grammar_corrector is mock_corrector
+        assert mock_corrector in app.processors
+
+    @patch("whisper_dictation.dictation_app.Transcriber")
+    def test_invalid_new_config_leaves_previous_state_untouched(self, mock_transcriber_cls):
+        from whisper_dictation.config import DictationConfig
+
+        app = self._make_app()
+        original_transcriber = app.transcriber
+        mock_transcriber_cls.side_effect = ValueError("boom")
+        new_config = DictationConfig(model_size="not-a-real-model")
+
+        with pytest.raises(ValueError):
+            app.apply_config(new_config)
+
+        assert app.transcriber is original_transcriber
+        assert app.hotkey == {"cmd", "shift"}  # unchanged, not the new_config's
+        assert app.config.model_size == "base"  # unchanged
+
+
 class TestDictationAppThreadSafety:
     """Test thread safety of DictationApp."""
 
