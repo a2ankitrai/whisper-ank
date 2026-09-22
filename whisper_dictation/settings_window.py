@@ -44,6 +44,35 @@ GRAMMAR_ENGINE_CHOICES = ["none", "languagetool", "gramformer"]
 RECORDING_MODE_CHOICES = ["push_to_talk", "toggle"]
 MODEL_SIZE_CHOICES = ["tiny", "base", "small", "medium", "large-v3"]
 
+# faster_whisper's supported language codes (faster_whisper.tokenizer's
+# private _LANGUAGE_CODES, copied here as a plain list rather than importing
+# a private attribute — this set has been stable across Whisper releases).
+# "auto" maps to language=None (Whisper auto-detects).
+LANGUAGE_CHOICES = ["auto"] + [
+    "af", "am", "ar", "as", "az", "ba", "be", "bg", "bn", "bo", "br", "bs",
+    "ca", "cs", "cy", "da", "de", "el", "en", "es", "et", "eu", "fa", "fi",
+    "fo", "fr", "gl", "gu", "ha", "haw", "he", "hi", "hr", "ht", "hu", "hy",
+    "id", "is", "it", "ja", "jw", "ka", "kk", "km", "kn", "ko", "la", "lb",
+    "ln", "lo", "lt", "lv", "mg", "mi", "mk", "ml", "mn", "mr", "ms", "mt",
+    "my", "ne", "nl", "nn", "no", "oc", "pa", "pl", "ps", "pt", "ro", "ru",
+    "sa", "sd", "si", "sk", "sl", "sn", "so", "sq", "sr", "su", "sv", "sw",
+    "ta", "te", "tg", "th", "tk", "tl", "tr", "tt", "uk", "ur", "uz", "vi",
+    "yi", "yo", "yue", "zh",
+]
+
+# Best-effort snapshot of languages Argos Translate can translate English
+# into. Argos's real availability comes from a live, downloadable package
+# index (see translator.py), which this list doesn't track — an entry that's
+# actually unavailable just degrades to the "package not found" warning
+# translator.py already prints, the same failure mode free text had.
+# "none" maps to target_language=None (no post-translation step).
+TARGET_LANGUAGE_CHOICES = ["none"] + [
+    "ar", "az", "bg", "bn", "ca", "cs", "da", "de", "el", "eo", "es", "et",
+    "eu", "fa", "fi", "fr", "ga", "gl", "he", "hi", "hu", "id", "it", "ja",
+    "ko", "lt", "lv", "ms", "nb", "nl", "pl", "pt", "ro", "ru", "sk", "sl",
+    "sq", "sv", "th", "tl", "tr", "uk", "ur", "vi", "zh", "zt",
+]
+
 
 class SettingsWindow(NSObject):
     """Owns the NSWindow and its controls for editing a DictationConfig."""
@@ -80,8 +109,8 @@ class SettingsWindow(NSObject):
             content, y, "Model size", MODEL_SIZE_CHOICES, config.model_size
         )
         y -= ROW_HEIGHT
-        self.language_field = self._add_text_field(
-            content, y, "Language", config.language or ""
+        self.language_popup = self._add_popup(
+            content, y, "Language", LANGUAGE_CHOICES, config.language or "auto"
         )
         y -= ROW_HEIGHT
         self.multilingual_checkbox = self._add_checkbox(
@@ -92,8 +121,9 @@ class SettingsWindow(NSObject):
             content, y, "Translate to English", config.translate_to_english
         )
         y -= ROW_HEIGHT
-        self.target_language_field = self._add_text_field(
-            content, y, "Target language", config.target_language or ""
+        self.target_language_popup = self._add_popup(
+            content, y, "Target language", TARGET_LANGUAGE_CHOICES,
+            config.target_language or "none",
         )
         y -= ROW_HEIGHT
         self.grammar_engine_popup = self._add_popup(
@@ -184,10 +214,10 @@ class SettingsWindow(NSObject):
     def _read_fields(self) -> dict:
         return {
             "model_size": self.model_size_popup.titleOfSelectedItem(),
-            "language": self.language_field.stringValue(),
+            "language": self.language_popup.titleOfSelectedItem(),
             "grammar_engine": self.grammar_engine_popup.titleOfSelectedItem(),
             "translate_to_english": bool(self.translate_checkbox.state()),
-            "target_language": self.target_language_field.stringValue(),
+            "target_language": self.target_language_popup.titleOfSelectedItem(),
             "multilingual": bool(self.multilingual_checkbox.state()),
             "remove_fillers": bool(self.remove_fillers_checkbox.state()),
             "hotwords": self.hotwords_field.stringValue(),

@@ -12,8 +12,9 @@ from .config import DictationConfig
 def build_config_from_fields(fields: dict, base: DictationConfig) -> DictationConfig:
     """Build a validated DictationConfig from raw settings-window field values.
 
-    `fields` keys: model_size, language, grammar_engine ("none" or an
-    engine name), translate_to_english, target_language, multilingual,
+    `fields` keys: model_size, language ("auto" or an ISO 639-1 code),
+    grammar_engine ("none" or an engine name), translate_to_english,
+    target_language ("none" or an ISO 639-1 code), multilingual,
     remove_fillers, hotwords (comma-separated string), audio_feedback,
     hotkey (e.g. "cmd+shift"), recording_mode, replay_hotkey (e.g.
     "cmd+shift+v"). `base` supplies fields the settings window doesn't
@@ -21,12 +22,14 @@ def build_config_from_fields(fields: dict, base: DictationConfig) -> DictationCo
     showing directly in the UI, on an invalid hotkey/replay-hotkey spec.
     """
     grammar_engine = fields["grammar_engine"]
+    language = fields["language"]
+    target_language = fields["target_language"]
     config = DictationConfig(
         model_size=fields["model_size"],
-        language=fields["language"].strip() or None,
+        language=None if language == "auto" else language,
         grammar_engine=None if grammar_engine == "none" else grammar_engine,
         translate_to_english=fields["translate_to_english"],
-        target_language=fields["target_language"].strip() or None,
+        target_language=None if target_language == "none" else target_language,
         multilingual=fields["multilingual"],
         remove_fillers=fields["remove_fillers"],
         hotwords=[h.strip() for h in fields["hotwords"].split(",") if h.strip()],

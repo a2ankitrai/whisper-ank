@@ -14,7 +14,7 @@ def _base_fields(**overrides) -> dict:
         "language": "en",
         "grammar_engine": "none",
         "translate_to_english": False,
-        "target_language": "",
+        "target_language": "none",
         "multilingual": False,
         "remove_fillers": True,
         "hotwords": "",
@@ -38,12 +38,13 @@ class TestBuildConfigFromFields:
 
         assert config == DictationConfig()
 
-    def test_empty_language_and_target_language_become_none(self):
+    def test_auto_language_and_none_target_language_become_none(self):
         from whisper_dictation.config import DictationConfig
         from whisper_dictation.settings_form import build_config_from_fields
 
         config = build_config_from_fields(
-            _base_fields(language="  ", target_language="  "), base=DictationConfig()
+            _base_fields(language="auto", target_language="none"),
+            base=DictationConfig(),
         )
 
         assert config.language is None
