@@ -64,6 +64,11 @@ class SettingsWindow(NSObject):
             False,
         )
         self.window.setTitle_("Whisper Dictation Settings")
+        # Without this, closing the window (its default close button) releases
+        # it out from under the Python-side controller, since NSWindow
+        # defaults releasedWhenClosed to True — an over-release risk given we
+        # keep our own strong reference to reuse the window on reopen.
+        self.window.setReleasedWhenClosed_(False)
 
         content = self.window.contentView()
         y = height - ROW_HEIGHT

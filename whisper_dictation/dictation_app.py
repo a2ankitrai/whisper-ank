@@ -132,14 +132,38 @@ class DictationApp:
         self.grammar_corrector = grammar_corrector
         self.translator = translator
 
+    # Fields _build_pipeline() actually reads (kept in sync with its body).
+    # Anything not in this set can't affect the transcriber/processors, so
+    # apply_config() must not pay for a pipeline rebuild when only those
+    # fields changed.
+    _PIPELINE_FIELDS = (
+        "model_size",
+        "language",
+        "translate_to_english",
+        "multilingual",
+        "hotwords",
+        "grammar_engine",
+        "target_language",
+        "remove_fillers",
+        "snippets",
+    )
+
     def apply_config(self, new_config: DictationConfig) -> None:
         """Apply a changed config to the running app without a restart.
 
-        Rebuilds the (possibly slow, possibly failing) pipeline first;
-        only if that succeeds do the cheap live attributes and self.config
-        get updated, so a bad config never leaves the app half-changed.
+        Rebuilds the (possibly slow, possibly failing) pipeline first, and
+        only when a pipeline-relevant field actually changed — Transcriber
+        eagerly loads the Whisper model, so rebuilding on every call (e.g.
+        for a trivial recording-mode toggle from the menu bar) would freeze
+        the Cocoa main thread for seconds. Only if the rebuild succeeds do
+        the cheap live attributes and self.config get updated, so a bad
+        config never leaves the app half-changed.
         """
-        self._build_pipeline(new_config)
+        if any(
+            getattr(self.config, field) != getattr(new_config, field)
+            for field in self._PIPELINE_FIELDS
+        ):
+            self._build_pipeline(new_config)
 
         with self.lock:
             self.hotkey = new_config.hotkey

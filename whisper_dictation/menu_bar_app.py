@@ -55,6 +55,12 @@ class MenuBarApp(rumps.App):
     def _poll(self, _timer):
         self.dictation_app.poll_health()
         self.title = format_status_title(self.dictation_app.is_recording)
+        # Self-heal the menu's own display: config can also change via the
+        # Settings window's Save button (a separate code path from these
+        # menu items' own toggle handlers), which would otherwise leave the
+        # recording-mode label and audio-feedback checkmark stale.
+        self._sync_recording_mode_label()
+        self.audio_feedback_item.state = self.dictation_app.config.audio_feedback
         if not self.dictation_app.running:
             rumps.quit_application()
 
@@ -71,6 +77,18 @@ class MenuBarApp(rumps.App):
         sender.state = new_config.audio_feedback
 
     def _open_settings(self, _sender):
+        # Reuse the existing window controller rather than building a new
+        # one on every click: a fresh SettingsWindow would overwrite our
+        # only Python-side reference to the previous one while its NSWindow
+        # (with a Save button targeting the now-unreferenced old controller)
+        # is still on screen — a deallocated-target crash risk. Tradeoff:
+        # the fields won't pick up changes made outside this window (e.g. a
+        # saved-config edit elsewhere) until it's recreated, which is
+        # acceptable for this low-risk cleanup.
+        if self._settings_window is not None:
+            self._settings_window.show()
+            return
+
         from .settings_window import open_settings_window
 
         # Keep a reference so ARC/PyObjC doesn't release the window early.

@@ -113,11 +113,11 @@ This is useful for remote connections or environments where a menu bar app is no
 
 #### CLI Flags Override Config
 
-By default, the app loads saved settings from `~/.whisper_dictation/config.json`. When you pass any CLI flag (e.g., `--model large-v3`, `--language de`), that flag's value **overrides** the saved config for that run — matching the app's "explicit flag wins" philosophy. A bare `--no-gui` alone still loads all other settings from the saved config file. For example:
+By default, the app loads saved settings from `~/.whisper_dictation/config.json`. Passing any CLI flag other than `--no-gui` (e.g., `--model large-v3`, `--language de`) makes the app ignore the saved config file **entirely** for that run — it's a whole-file override, not a per-field merge. Every setting then comes from argparse defaults plus whatever flags you passed, and nothing is written back to the saved config for that run. A bare `--no-gui` alone is the one exception: it's a run-mode switch, not a config flag, so it still loads all settings from the saved config file. For example:
 
-- `python dictation.py --model large-v3` — uses large-v3 model; all other settings from saved config
-- `python dictation.py --no-gui` — headless mode; all settings from saved config
-- `python dictation.py --no-gui --model tiny` — headless mode with tiny model; other settings from saved config
+- `python dictation.py --model large-v3` — uses large-v3 model; **all other settings come from argparse defaults, not the saved config**, and nothing is persisted this run
+- `python dictation.py --no-gui` — headless mode; all settings come from the saved config file (bare `--no-gui` doesn't count as a config flag)
+- `python dictation.py --no-gui --model tiny` — headless mode with tiny model; all other settings come from argparse defaults (saved config ignored), nothing persisted
 
 ---
 

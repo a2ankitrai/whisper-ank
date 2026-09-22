@@ -786,6 +786,27 @@ class TestDictationAppApplyConfig:
         assert app.hotkey == {"cmd", "shift"}  # unchanged, not the new_config's
         assert app.config.model_size == "base"  # unchanged
 
+    @patch("whisper_dictation.dictation_app.Transcriber")
+    def test_non_pipeline_field_change_skips_transcriber_rebuild(
+        self, mock_transcriber_cls
+    ):
+        """A trivial toggle like recording_mode must not reload the model.
+
+        Transcriber.__init__ eagerly loads the Whisper model; rebuilding it
+        on every apply_config() call would freeze the Cocoa main thread on
+        quick menu-bar toggles (see MenuBarApp._toggle_recording_mode).
+        """
+        from whisper_dictation.config import DictationConfig
+
+        app = self._make_app()
+        new_config = DictationConfig(recording_mode="toggle")
+
+        app.apply_config(new_config)
+
+        mock_transcriber_cls.assert_not_called()
+        assert app.recording_mode == "toggle"
+        assert app.config == new_config
+
 
 class TestDictationAppBackgroundLifecycle:
     """Tests for start_background()/poll_health() (GUI/headless shared plumbing)."""
