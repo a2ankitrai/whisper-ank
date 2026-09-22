@@ -75,6 +75,49 @@ The key innovation is using **CGEvents at the HID (Human Interface Device) level
 
 The diagram above shows the default **push-to-talk** flow (hold to record, release to stop). Pass `--recording-mode toggle` to instead press the hotkey once to start and again to stop — useful if holding modifiers for a long sentence is uncomfortable. The last 10 transcriptions are kept in memory regardless of mode; press the replay hotkey (`Cmd+Shift+V` by default) to retype the most recent one into whatever window is now focused, e.g. to paste a dictated sentence into a second app after the fact.
 
+### Menu Bar App and Settings Window
+
+By default, the app launches as a **menu bar app** (`python dictation.py`), appearing as an icon in the macOS menu bar with a status indicator:
+- **🎙️ Idle** — waiting for a recording hotkey press
+- **🔴 Recording** — actively recording audio
+
+Click the menu bar icon to reveal quick controls:
+- **Toggle Recording** — Start/stop recording without holding the hotkey
+- **Toggle Audio Feedback** — Enable/disable beeps on record start/stop
+- **Settings…** — Open the native settings window
+
+#### Settings Window
+
+Clicking **Settings…** opens a native macOS window providing full access to all configuration options:
+- **Model** — Whisper model size (tiny, base, small, medium, large-v3)
+- **Language** — Language code and multilingual/code-mixing support
+- **Translation** — Enable speech-to-English translation; set target language
+- **Grammar** — Grammar correction engine (languagetool, gramformer)
+- **Hotwords** — Custom dictionary for proper nouns and technical terms
+- **Audio Feedback** — Toggle beeps on record start/stop
+- **Hotkeys** — Customize recording and replay hotkeys
+- **Recording Mode** — Push-to-talk (hold to record) or toggle (press to start/stop)
+
+Changes apply immediately — no restart needed. All settings persist to `~/.whisper_dictation/config.json` and are restored on the next run.
+
+#### Headless Mode
+
+To run the app without a menu bar (console-only, as in earlier versions), use the `--no-gui` flag:
+
+```bash
+python dictation.py --no-gui
+```
+
+This is useful for remote connections or environments where a menu bar app is not needed.
+
+#### CLI Flags Override Config
+
+By default, the app loads saved settings from `~/.whisper_dictation/config.json`. When you pass any CLI flag (e.g., `--model large-v3`, `--language de`), that flag's value **overrides** the saved config for that run — matching the app's "explicit flag wins" philosophy. A bare `--no-gui` alone still loads all other settings from the saved config file. For example:
+
+- `python dictation.py --model large-v3` — uses large-v3 model; all other settings from saved config
+- `python dictation.py --no-gui` — headless mode; all settings from saved config
+- `python dictation.py --no-gui --model tiny` — headless mode with tiny model; other settings from saved config
+
 ---
 
 ## Prerequisites
@@ -250,6 +293,7 @@ python dictation.py [OPTIONS]
 | `--hotkey` | `cmd+shift` | Custom hotkey (e.g., `ctrl+shift`). Modifiers: `cmd`, `shift`, `ctrl`, `alt` |
 | `--recording-mode` | `push_to_talk` | `push_to_talk` (hold to record) or `toggle` (press once to start, press again to stop) |
 | `--replay-hotkey` | `cmd+shift+v` | Hotkey that retypes the most recent transcription (last 10 are kept in memory) |
+| `--no-gui` | off | Run headless — console only, no menu bar app |
 
 ### Examples
 
