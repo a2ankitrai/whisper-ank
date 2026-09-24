@@ -44,6 +44,9 @@ class MenuBarApp(rumps.App):
     def run(self, **kwargs):
         """Start DictationApp's background threads, then take the main thread."""
         self.dictation_app.start_background()
+        from .app_identity import apply_app_identity
+
+        apply_app_identity()
         rumps.Timer(self._poll, POLL_INTERVAL).start()
         super().run(**kwargs)
 

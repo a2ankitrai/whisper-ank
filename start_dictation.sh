@@ -18,9 +18,13 @@ if [ ! -f venv/bin/activate ]; then
     exit 1
 fi
 
-source venv/bin/activate
+[ -x WisperAnk.app/Contents/MacOS/WisperAnk ] || ./build_app.sh
 
-nohup python -u dictation.py "$@" > dictation.log 2>&1 &
+# Run through the app bundle's Python copy so the Dock shows "WisperAnk".
+SITE_PACKAGES="$(./venv/bin/python -c 'import site; print(site.getsitepackages()[0])')"
+export PYTHONPATH="$SITE_PACKAGES:$PWD"
+
+nohup WisperAnk.app/Contents/MacOS/WisperAnk -u dictation.py "$@" > dictation.log 2>&1 &
 echo $! > dictation.pid
 disown
 
