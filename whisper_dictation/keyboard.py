@@ -10,9 +10,14 @@ from __future__ import annotations
 
 # macOS-specific imports for keyboard simulation and event-tap health checks
 from Quartz import (
+    CGEventGetFlags,
+    CGEventGetIntegerValueField,
     CGEventSourceFlagsState,
     CGEventTapEnable,
     CGEventTapIsEnabled,
+    kCGEventKeyDown,
+    kCGEventKeyUp,
+    kCGKeyboardEventKeycode,
     kCGEventSourceStateCombinedSessionState,
     kCGEventFlagMaskAlternate,
     kCGEventFlagMaskCommand,
@@ -50,6 +55,55 @@ def key_to_char(key) -> str | None:
     if not char:
         return None
     return char.lower()
+
+
+#: ANSI virtual keycodes for the keys allowed as the trailing key of a
+#: modifier+key record hotkey. Matched by keycode, not character, because
+#: Option turns 'd' into '∂' in the event's character.
+KEY_CODES = {
+    "a": 0, "s": 1, "d": 2, "f": 3, "h": 4, "g": 5, "z": 6, "x": 7, "c": 8,
+    "v": 9, "b": 11, "q": 12, "w": 13, "e": 14, "r": 15, "y": 16, "t": 17,
+    "1": 18, "2": 19, "3": 20, "4": 21, "6": 22, "5": 23, "9": 25, "7": 26,
+    "8": 28, "0": 29, "o": 31, "u": 32, "i": 34, "p": 35, "l": 37, "j": 38,
+    "k": 40, "n": 45, "m": 46,
+}
+
+
+def key_matches(key, target: str) -> bool:
+    """True if a pynput key is the plain key named `target` (e.g. 'd').
+
+    Compares the virtual keycode first so it still matches while Option (or
+    another modifier) changes the produced character.
+    """
+    expected = KEY_CODES.get(target)
+    if expected is not None and getattr(key, "vk", None) == expected:
+        return True
+    return key_to_char(key) == target
+
+
+def make_hotkey_intercept(get_hotkey):
+    """Build a pynput `intercept` callback that swallows the record hotkey.
+
+    Without this, Option+D would also type '∂' into the focused window.
+    `get_hotkey()` returns (modifiers, key) or (modifiers, None); the
+    callback runs inside the event tap, so it must stay cheap.
+    """
+
+    def intercept(event_type, event):
+        if event_type not in (kCGEventKeyDown, kCGEventKeyUp):
+            return event
+        modifiers, key = get_hotkey()
+        expected = KEY_CODES.get(key) if key else None
+        if expected is None:
+            return event
+        if CGEventGetIntegerValueField(event, kCGKeyboardEventKeycode) != expected:
+            return event
+        flags = CGEventGetFlags(event)
+        if all(flags & MODIFIER_FLAG_MASKS[m] for m in modifiers):
+            return None
+        return event
+
+    return intercept
 
 
 _RESILIENT_LISTENER_CLS = None

@@ -13,6 +13,14 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 
+def modifier_only_config(**overrides):
+    """Config with the classic modifier-only cmd+shift record hotkey."""
+    from whisper_dictation.config import DictationConfig
+
+    return DictationConfig(hotkey={"cmd", "shift"}, hotkey_key=None, **overrides)
+
+
+
 def run_worker(app, timeout=2.0):
     """Run the app's command worker until all queued commands are handled."""
     worker = threading.Thread(target=app._worker_loop, daemon=True)
@@ -53,12 +61,13 @@ class TestDictationAppInit:
         """Should initialize with correct default state."""
         from whisper_dictation.dictation_app import DictationApp
 
-        app = DictationApp()
+        app = DictationApp(config=modifier_only_config())
 
         assert app.is_recording is False
         assert app.running is True
         assert app.pressed_modifiers == set()
         assert app.hotkey == {"cmd", "shift"}
+        assert app.hotkey_key is None
 
     @patch("whisper_dictation.dictation_app.AudioFeedback")
     @patch("whisper_dictation.dictation_app.TextTyper")
@@ -103,7 +112,7 @@ class TestDictationAppKeyToModifier:
         from whisper_dictation.dictation_app import DictationApp
         from pynput.keyboard import Key
 
-        app = DictationApp()
+        app = DictationApp(config=modifier_only_config())
 
         assert app._key_to_modifier(Key.cmd) == "cmd"
         assert app._key_to_modifier(Key.cmd_l) == "cmd"
@@ -118,7 +127,7 @@ class TestDictationAppKeyToModifier:
         from whisper_dictation.dictation_app import DictationApp
         from pynput.keyboard import Key
 
-        app = DictationApp()
+        app = DictationApp(config=modifier_only_config())
 
         assert app._key_to_modifier(Key.shift) == "shift"
         assert app._key_to_modifier(Key.shift_l) == "shift"
@@ -133,7 +142,7 @@ class TestDictationAppKeyToModifier:
         from whisper_dictation.dictation_app import DictationApp
         from pynput.keyboard import Key
 
-        app = DictationApp()
+        app = DictationApp(config=modifier_only_config())
 
         assert app._key_to_modifier(Key.ctrl) == "ctrl"
         assert app._key_to_modifier(Key.ctrl_l) == "ctrl"
@@ -148,7 +157,7 @@ class TestDictationAppKeyToModifier:
         from whisper_dictation.dictation_app import DictationApp
         from pynput.keyboard import Key
 
-        app = DictationApp()
+        app = DictationApp(config=modifier_only_config())
 
         assert app._key_to_modifier(Key.alt) == "alt"
         assert app._key_to_modifier(Key.alt_l) == "alt"
@@ -163,7 +172,7 @@ class TestDictationAppKeyToModifier:
         from whisper_dictation.dictation_app import DictationApp
         from pynput.keyboard import Key, KeyCode
 
-        app = DictationApp()
+        app = DictationApp(config=modifier_only_config())
 
         assert app._key_to_modifier(Key.space) is None
         assert app._key_to_modifier(Key.enter) is None
@@ -182,7 +191,7 @@ class TestDictationAppOnPress:
         from whisper_dictation.dictation_app import DictationApp
         from pynput.keyboard import Key
 
-        app = DictationApp()
+        app = DictationApp(config=modifier_only_config())
         app._on_press(Key.cmd)
 
         assert "cmd" in app.pressed_modifiers
@@ -199,7 +208,7 @@ class TestDictationAppOnPress:
         mock_recorder = MagicMock()
         mock_recorder_cls.return_value = mock_recorder
 
-        app = DictationApp()
+        app = DictationApp(config=modifier_only_config())
         app._on_press(Key.cmd)
         app._on_press(Key.shift)
 
@@ -220,7 +229,7 @@ class TestDictationAppOnPress:
         mock_recorder = MagicMock()
         mock_recorder_cls.return_value = mock_recorder
 
-        app = DictationApp()
+        app = DictationApp(config=modifier_only_config())
         app._on_press(Key.cmd)
         app._on_press(Key.shift)  # Start recording
         app._on_press(Key.shift)  # Press shift again
@@ -233,16 +242,16 @@ class TestDictationAppOnPress:
     @patch("whisper_dictation.dictation_app.TextTyper")
     @patch("whisper_dictation.dictation_app.Transcriber")
     @patch("whisper_dictation.dictation_app.AudioRecorder")
-    def test_escape_sets_running_false(self, mock_recorder_cls, mock_transcriber_cls, mock_typer_cls, mock_feedback_cls):
-        """Should set running to False when escape pressed."""
+    def test_escape_does_not_quit(self, mock_recorder_cls, mock_transcriber_cls, mock_typer_cls, mock_feedback_cls):
+        """Escape is a normal key in other apps; it must not quit dictation."""
         from whisper_dictation.dictation_app import DictationApp
         from pynput.keyboard import Key
 
-        app = DictationApp()
+        app = DictationApp(config=modifier_only_config())
         result = app._on_press(Key.esc)
 
-        assert app.running is False
-        assert result is False  # Should return False to stop listener
+        assert app.running is True
+        assert result is None
 
     @patch("whisper_dictation.dictation_app.AudioFeedback")
     @patch("whisper_dictation.dictation_app.TextTyper")
@@ -256,7 +265,7 @@ class TestDictationAppOnPress:
         mock_recorder = MagicMock()
         mock_recorder_cls.return_value = mock_recorder
 
-        app = DictationApp()
+        app = DictationApp(config=modifier_only_config())
         app._on_press(Key.cmd)  # Only cmd, not shift
 
         assert app.is_recording is False
@@ -275,7 +284,7 @@ class TestDictationAppOnRelease:
         from whisper_dictation.dictation_app import DictationApp
         from pynput.keyboard import Key
 
-        app = DictationApp()
+        app = DictationApp(config=modifier_only_config())
         app.pressed_modifiers = {"cmd", "shift"}
         app._on_release(Key.cmd)
 
@@ -291,7 +300,7 @@ class TestDictationAppOnRelease:
         from whisper_dictation.dictation_app import DictationApp
         from pynput.keyboard import Key
 
-        app = DictationApp()
+        app = DictationApp(config=modifier_only_config())
         app.is_recording = True
         app.pressed_modifiers = {"cmd", "shift"}
 
@@ -312,7 +321,7 @@ class TestDictationAppOnRelease:
         from whisper_dictation.dictation_app import DictationApp
         from pynput.keyboard import Key
 
-        app = DictationApp()
+        app = DictationApp(config=modifier_only_config())
         app.is_recording = False
         app.pressed_modifiers = {"cmd", "shift"}
 
@@ -340,7 +349,7 @@ class TestDictationAppProcessRecording:
         mock_recorder.stop.return_value = None
         mock_recorder_cls.return_value = mock_recorder
 
-        app = DictationApp()
+        app = DictationApp(config=modifier_only_config())
         app._process_recording()
 
         # Should not crash, transcriber should not be called
@@ -359,7 +368,7 @@ class TestDictationAppProcessRecording:
         mock_recorder.stop.return_value = np.zeros(1000, dtype=np.float32)
         mock_recorder_cls.return_value = mock_recorder
 
-        app = DictationApp()
+        app = DictationApp(config=modifier_only_config())
         app._process_recording()
 
         # Should not transcribe
@@ -384,7 +393,7 @@ class TestDictationAppProcessRecording:
         mock_typer = MagicMock()
         mock_typer_cls.return_value = mock_typer
 
-        app = DictationApp()
+        app = DictationApp(config=modifier_only_config())
         app._process_recording()
 
         # Should transcribe
@@ -411,7 +420,7 @@ class TestDictationAppProcessRecording:
         mock_typer = MagicMock()
         mock_typer_cls.return_value = mock_typer
 
-        app = DictationApp()
+        app = DictationApp(config=modifier_only_config())
         app._process_recording()
 
         # Should not type anything
@@ -436,7 +445,7 @@ class TestDictationAppProcessRecording:
         mock_typer = MagicMock()
         mock_typer_cls.return_value = mock_typer
 
-        app = DictationApp()
+        app = DictationApp(config=modifier_only_config())
         # Should not raise exception
         app._process_recording()
 
@@ -459,7 +468,7 @@ class TestDictationAppProcessRecording:
         mock_transcriber.transcribe.return_value = "test"
         mock_transcriber_cls.return_value = mock_transcriber
 
-        app = DictationApp()
+        app = DictationApp(config=modifier_only_config())
 
         # Track temp files created
         created_files = []
@@ -494,7 +503,7 @@ class TestDictationAppToggleMode:
         from whisper_dictation.dictation_app import DictationApp
         from pynput.keyboard import Key
 
-        app = DictationApp(config=DictationConfig(recording_mode="toggle"))
+        app = DictationApp(config=modifier_only_config(recording_mode="toggle"))
         app._on_press(Key.cmd)
         app._on_press(Key.shift)
 
@@ -512,7 +521,7 @@ class TestDictationAppToggleMode:
         from whisper_dictation.dictation_app import DictationApp
         from pynput.keyboard import Key
 
-        app = DictationApp(config=DictationConfig(recording_mode="toggle"))
+        app = DictationApp(config=modifier_only_config(recording_mode="toggle"))
         app._on_press(Key.cmd)
         app._on_press(Key.shift)
         app._on_release(Key.cmd)
@@ -532,7 +541,7 @@ class TestDictationAppToggleMode:
         from whisper_dictation.dictation_app import DictationApp
         from pynput.keyboard import Key
 
-        app = DictationApp(config=DictationConfig(recording_mode="toggle"))
+        app = DictationApp(config=modifier_only_config(recording_mode="toggle"))
         app._on_press(Key.cmd)
         app._on_press(Key.shift)
         app._on_release(Key.cmd)
@@ -555,7 +564,7 @@ class TestDictationAppToggleMode:
         from whisper_dictation.dictation_app import DictationApp
         from pynput.keyboard import Key
 
-        app = DictationApp(config=DictationConfig(recording_mode="toggle"))
+        app = DictationApp(config=modifier_only_config(recording_mode="toggle"))
         app._on_press(Key.cmd)
         app._on_press(Key.shift)  # rising edge: start
         app._on_press(Key.shift)  # still held: must not toggle again
@@ -579,7 +588,7 @@ class TestDictationAppReplay:
         mock_typer = MagicMock()
         mock_typer_cls.return_value = mock_typer
 
-        app = DictationApp()
+        app = DictationApp(config=modifier_only_config())
         app.history.extend(["first", "second"])
 
         app._replay_last()
@@ -599,7 +608,7 @@ class TestDictationAppReplay:
         mock_typer = MagicMock()
         mock_typer_cls.return_value = mock_typer
 
-        app = DictationApp()
+        app = DictationApp(config=modifier_only_config())
         app._replay_last()
 
         mock_typer.type_text.assert_not_called()
@@ -614,7 +623,7 @@ class TestDictationAppReplay:
         """History should only keep the last 10 transcriptions."""
         from whisper_dictation.dictation_app import DictationApp
 
-        app = DictationApp()
+        app = DictationApp(config=modifier_only_config())
         for i in range(12):
             app.history.append(f"item{i}")
 
@@ -639,7 +648,7 @@ class TestDictationAppReplay:
         mock_transcriber.transcribe.return_value = "Hello world"
         mock_transcriber_cls.return_value = mock_transcriber
 
-        app = DictationApp()
+        app = DictationApp(config=modifier_only_config())
         app._process_recording()
 
         assert list(app.history) == ["Hello world"]
@@ -694,7 +703,7 @@ class TestDictationAppReplay:
         from whisper_dictation.dictation_app import DictationApp
         from pynput.keyboard import KeyCode
 
-        app = DictationApp()
+        app = DictationApp(config=modifier_only_config())
         app._on_press(KeyCode.from_char("v"))
 
         assert app.commands.empty()
@@ -783,7 +792,7 @@ class TestDictationAppApplyConfig:
             app.apply_config(new_config)
 
         assert app.transcriber is original_transcriber
-        assert app.hotkey == {"cmd", "shift"}  # unchanged, not the new_config's
+        assert app.hotkey == {"alt"}  # unchanged, not the new_config's
         assert app.config.model_size == "base"  # unchanged
 
     @patch("whisper_dictation.dictation_app.Transcriber")
@@ -799,7 +808,7 @@ class TestDictationAppApplyConfig:
         from whisper_dictation.config import DictationConfig
 
         app = self._make_app()
-        new_config = DictationConfig(recording_mode="toggle")
+        new_config = modifier_only_config(recording_mode="toggle")
 
         app.apply_config(new_config)
 
@@ -819,7 +828,7 @@ class TestDictationAppBackgroundLifecycle:
              patch("whisper_dictation.dictation_app.TextTyper"), \
              patch("whisper_dictation.dictation_app.Transcriber"), \
              patch("whisper_dictation.dictation_app.AudioRecorder"):
-            return DictationApp(config=DictationConfig())
+            return DictationApp(config=modifier_only_config())
 
     @patch("whisper_dictation.dictation_app._resilient_listener_class")
     def test_start_background_starts_worker_and_listener(self, mock_listener_cls):
@@ -884,7 +893,7 @@ class TestDictationAppThreadSafety:
         from whisper_dictation.dictation_app import DictationApp
         from pynput.keyboard import Key
 
-        app = DictationApp()
+        app = DictationApp(config=modifier_only_config())
 
         # Simulate rapid concurrent key presses
         threads = []
@@ -912,7 +921,7 @@ class TestDictationAppThreadSafety:
         from whisper_dictation.dictation_app import DictationApp
         from pynput.keyboard import Key
 
-        app = DictationApp()
+        app = DictationApp(config=modifier_only_config())
         app.pressed_modifiers = {"cmd", "shift", "ctrl", "alt"}
 
         threads = []
@@ -943,7 +952,7 @@ class TestDictationAppRecovery:
         """A missed key release must not leave the app stuck in recording."""
         from whisper_dictation.dictation_app import DictationApp
 
-        app = DictationApp()
+        app = DictationApp(config=modifier_only_config())
         app.is_recording = True
         app.pressed_modifiers = {"cmd", "shift"}
 
@@ -964,7 +973,7 @@ class TestDictationAppRecovery:
         """Recording must continue while the hotkey is physically held."""
         from whisper_dictation.dictation_app import DictationApp
 
-        app = DictationApp()
+        app = DictationApp(config=modifier_only_config())
         app.is_recording = True
         app.pressed_modifiers = {"cmd"}
 
@@ -1019,7 +1028,7 @@ class TestDictationAppDoesNotStall:
         mock_recorder = MagicMock()
         mock_recorder_cls.return_value = mock_recorder
 
-        app = DictationApp()
+        app = DictationApp(config=modifier_only_config())
 
         # First transcription hangs forever
         hang = threading.Event()
@@ -1043,3 +1052,68 @@ class TestDictationAppDoesNotStall:
                 hang.set()
                 app.running = False
                 worker.join(timeout=2)
+
+
+class TestDictationAppKeyComboHotkey:
+    """Option+D style hotkey: modifiers plus a trailing key."""
+
+    def _app(self, **kwargs):
+        from whisper_dictation.config import DictationConfig
+        from whisper_dictation.dictation_app import DictationApp
+
+        with patch("whisper_dictation.dictation_app.AudioFeedback"), patch(
+            "whisper_dictation.dictation_app.TextTyper"
+        ), patch("whisper_dictation.dictation_app.Transcriber"), patch(
+            "whisper_dictation.dictation_app.AudioRecorder"
+        ):
+            return DictationApp(config=DictationConfig(**kwargs))
+
+    def _d(self):
+        from pynput.keyboard import KeyCode
+
+        return KeyCode(vk=2, char="\u2202")  # what macOS reports for Option+D
+
+    def test_modifier_alone_does_not_record(self):
+        from pynput.keyboard import Key
+
+        app = self._app()
+        app._on_press(Key.alt)
+        assert app.is_recording is False
+
+    def test_key_without_modifier_does_not_record(self):
+        app = self._app()
+        app._on_press(self._d())
+        assert app.is_recording is False
+
+    def test_push_to_talk_starts_on_combo_and_stops_on_key_release(self):
+        from pynput.keyboard import Key
+
+        app = self._app()
+        app._on_press(Key.alt)
+        app._on_press(self._d())
+        assert app.is_recording is True
+        app._on_press(self._d())  # auto-repeat
+        assert app.commands.qsize() == 1
+        app._on_release(self._d())
+        assert app.is_recording is False
+
+    def test_push_to_talk_stops_when_modifier_released_first(self):
+        from pynput.keyboard import Key
+
+        app = self._app()
+        app._on_press(Key.alt)
+        app._on_press(self._d())
+        app._on_release(Key.alt)
+        assert app.is_recording is False
+
+    def test_toggle_mode_ignores_repeat_and_release(self):
+        from pynput.keyboard import Key
+
+        app = self._app(recording_mode="toggle")
+        app._on_press(Key.alt)
+        app._on_press(self._d())
+        app._on_press(self._d())  # auto-repeat must not stop it
+        app._on_release(self._d())
+        assert app.is_recording is True
+        app._on_press(self._d())
+        assert app.is_recording is False

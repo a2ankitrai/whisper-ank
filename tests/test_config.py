@@ -64,11 +64,12 @@ class TestDictationConfigDefaults:
         assert config.audio_feedback is True
 
     def test_default_hotkey(self):
-        """Should default to cmd+shift hotkey."""
+        """Should default to the alt+d hotkey."""
         from whisper_dictation.config import DictationConfig
-        
+
         config = DictationConfig()
-        assert config.hotkey == {"cmd", "shift"}
+        assert config.hotkey == {"alt"}
+        assert config.hotkey_key == "d"
 
 
 class TestDictationConfigCustomValues:
@@ -489,7 +490,8 @@ class TestDictationConfigJsonRoundTrip:
         restored = DictationConfig.from_json_dict({"model_size": "tiny"})
 
         assert restored.model_size == "tiny"
-        assert restored.hotkey == {"cmd", "shift"}
+        assert restored.hotkey == {"alt"}
+        assert restored.hotkey_key == "d"
         assert restored.replay_hotkey == (frozenset({"cmd", "shift"}), "v")
 
 
@@ -575,3 +577,36 @@ class TestDictationConfigLoadSnippets:
             assert snippets["equation"] == "x = y + z"
         finally:
             Path(path).unlink()
+
+
+class TestRecordHotkeyParsing:
+    """Tests for _parse_record_hotkey (modifiers with an optional key)."""
+
+    def test_modifier_only_has_no_key(self):
+        from whisper_dictation.config import DictationConfig
+
+        assert DictationConfig._parse_record_hotkey("cmd+shift") == ({"cmd", "shift"}, None)
+
+    def test_modifier_plus_key(self):
+        from whisper_dictation.config import DictationConfig
+
+        assert DictationConfig._parse_record_hotkey(" Alt + D ") == ({"alt"}, "d")
+
+    def test_rejects_unsupported_key(self):
+        import pytest
+        from whisper_dictation.config import DictationConfig
+
+        with pytest.raises(ValueError, match="Unsupported hotkey key"):
+            DictationConfig._parse_record_hotkey("alt+banana")
+
+    def test_json_round_trip_keeps_key(self):
+        from whisper_dictation.config import DictationConfig
+
+        restored = DictationConfig.from_json_dict(DictationConfig().to_json_dict())
+        assert restored.hotkey == {"alt"} and restored.hotkey_key == "d"
+
+    def test_legacy_saved_hotkey_stays_modifier_only(self):
+        from whisper_dictation.config import DictationConfig
+
+        restored = DictationConfig.from_json_dict({"hotkey": ["cmd", "shift"]})
+        assert restored.hotkey_key is None

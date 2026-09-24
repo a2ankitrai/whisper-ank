@@ -66,7 +66,7 @@ A local speech-to-text dictation application that types transcribed text directl
 
 ### Technical Flow
 
-1. **Hotkey Detection**: `pynput` listens for `Cmd+Shift` key combination
+1. **Hotkey Detection**: `pynput` listens for the `Option+D` key combination (swallowed so it doesn't type `∂`)
 2. **Audio Capture**: `sounddevice` records from microphone at 16kHz
 3. **Transcription**: `faster-whisper` (CTranslate2) processes audio locally
 4. **Text Injection**: macOS `CGEvents` types characters into the focused app
@@ -95,11 +95,33 @@ Clicking **Settings…** opens a native macOS window providing full access to al
 - **Grammar** — Grammar correction engine (languagetool, gramformer)
 - **Remove fillers** — Strip filler words (um, uh, like) from output
 - **Hotwords** — Custom dictionary for proper nouns and technical terms
+- **Dictionary** — "Open dictionary file…" button; see [Custom Dictionary](#custom-dictionary)
 - **Audio Feedback** — Toggle beeps on record start/stop
 - **Hotkeys** — Customize recording and replay hotkeys
 - **Recording Mode** — Push-to-talk (hold to record) or toggle (press to start/stop)
 
 Changes apply immediately — no restart needed. All settings persist to `~/.whisper_dictation/config.json` and are restored on the next run.
+
+#### Custom Dictionary
+
+Fix words Whisper keeps mis-hearing (names, brands, jargon) with a plain-text file that can grow as long as you like. It lives at `~/.whisper_dictation/dictionary.txt`, is loaded on every launch, and is kept separate from `config.json`.
+
+Open it from **Settings → Dictionary → Open dictionary file…** (it's created with a short template if missing), or edit it in any editor. One `heard=correct` entry per line (commas also work); lines starting with `#` are comments:
+
+```
+# heard=correct
+kraxam=Kragzam
+craxam=Kragzam
+crag zam=Kragzam
+```
+
+- **Replacement** — after transcription, each heard variant is replaced with your spelling. Matching ignores case and only replaces whole words (`cat=dog` won't change "concat"). Multi-word entries work.
+- **Recognition bias** — the correct spellings are also passed to Whisper as hotwords, so it gets the word right more often; the replacements catch the misses.
+- **Applying changes** — press **Save** in Settings after editing the file (no restart). A malformed line is reported in the Settings status line and nothing is applied. On a plain launch the file is read at startup.
+- **Custom location** — `--dictionary-file path/to/words.txt` uses a different file for that run (this flag also makes the run ignore `config.json`, like any other flag).
+- **Adding variants** — when you spot a new misspelling, add another line.
+
+Dictionary entries are no longer stored in `config.json` or edited inline in Settings.
 
 #### Headless Mode
 
@@ -245,7 +267,7 @@ python dictation.py
 |--------|-----------------|-------------|
 | **Start Recording** | Hold `Cmd + Shift` | Microphone activates, recording begins |
 | **Stop & Transcribe** | Release keys | Audio is processed and text is typed |
-| **Quit** | Press `Escape` | Exits the application |
+| **Quit** | `Ctrl+C` (terminal) or menu bar → Quit, or `wdstop` | Exits the application |
 
 ### Workflow Example
 
@@ -291,7 +313,7 @@ python dictation.py [OPTIONS]
 | `--hotwords`, `-H` | none | Comma-separated list of proper nouns/jargon |
 | `--snippets-file` | none | Path to snippets file (see below) |
 | `--no-audio-feedback` | off | Disable beeps on record start/stop |
-| `--hotkey` | `cmd+shift` | Custom hotkey (e.g., `ctrl+shift`). Modifiers: `cmd`, `shift`, `ctrl`, `alt` |
+| `--hotkey` | `alt+d` | Custom hotkey: modifiers only (e.g., `ctrl+shift`) or modifiers plus a letter/digit (e.g., `alt+d`). Modifiers: `cmd`, `shift`, `ctrl`, `alt` |
 | `--recording-mode` | `push_to_talk` | `push_to_talk` (hold to record) or `toggle` (press once to start, press again to stop) |
 | `--replay-hotkey` | `cmd+shift+v` | Hotkey that retypes the most recent transcription (last 10 are kept in memory) |
 | `--no-gui` | off | Run headless — console only, no menu bar app |

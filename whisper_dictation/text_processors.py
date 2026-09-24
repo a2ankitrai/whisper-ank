@@ -66,3 +66,33 @@ class SnippetExpander(TextProcessor):
                 return self.snippets[snippet_name]
 
         return text
+
+
+class WordCorrector(TextProcessor):
+    """Replaces commonly mis-transcribed words with their correct spelling.
+
+    `corrections` maps what Whisper wrote ("kraxam") to what you meant
+    ("Kragzam"). Matching is case-insensitive on whole words; the longest
+    variants are tried first so multi-word entries beat their parts.
+    """
+
+    def __init__(self, corrections: dict[str, str]):
+        variants = sorted(
+            (k.strip() for k in corrections if k.strip()), key=len, reverse=True
+        )
+        self.corrections = {k.strip().lower(): v for k, v in corrections.items()}
+        self._pattern = (
+            re.compile(
+                r"(?<!\w)(" + "|".join(re.escape(v) for v in variants) + r")(?!\w)",
+                re.IGNORECASE,
+            )
+            if variants
+            else None
+        )
+
+    def process(self, text: str) -> str:
+        if not text or self._pattern is None:
+            return text
+        return self._pattern.sub(
+            lambda m: self.corrections[m.group(1).lower()], text
+        )

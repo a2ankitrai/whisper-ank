@@ -258,3 +258,70 @@ class TestCreateGrammarCorrector:
         
         result = create_grammar_corrector("unknown_engine")
         assert result is None
+
+
+class TestWordCorrector:
+    def test_replaces_misheard_variants_case_insensitively(self):
+        from whisper_dictation.text_processors import WordCorrector
+
+        c = WordCorrector({"kraxam": "Kragzam", "craxam": "Kragzam"})
+        assert c.process("I use Kraxam and craxam.") == "I use Kragzam and Kragzam."
+
+    def test_matches_whole_words_only(self):
+        from whisper_dictation.text_processors import WordCorrector
+
+        assert WordCorrector({"cat": "dog"}).process("concat cat") == "concat dog"
+
+    def test_multi_word_and_empty(self):
+        from whisper_dictation.text_processors import WordCorrector
+
+        c = WordCorrector({"crag zam": "Kragzam"})
+        assert c.process("try crag zam now") == "try Kragzam now"
+        assert WordCorrector({}).process("hi") == "hi"
+
+
+class TestDictionaryParsing:
+    def test_parse_and_errors(self):
+        import pytest
+        from whisper_dictation.config import DictationConfig
+
+        assert DictationConfig.parse_dictionary("Kraxam=Kragzam, a=B") == {
+            "kraxam": "Kragzam", "a": "B"}
+        assert DictationConfig.parse_dictionary("") == {}
+        with pytest.raises(ValueError):
+            DictationConfig.parse_dictionary("nonsense")
+
+    def test_dictionary_not_persisted_in_json(self):
+        from whisper_dictation.config import DictationConfig
+
+        c = DictationConfig(dictionary={"kraxam": "Kragzam"})
+        assert "dictionary" not in c.to_json_dict()
+
+    def test_reload_dictionary_from_file(self, tmp_path):
+        from whisper_dictation.config import DictationConfig
+
+        f = tmp_path / "words.txt"
+        f.write_text("# comment\nkraxam=Kragzam\ncrag zam=Kragzam\n")
+        c = DictationConfig(dictionary_path=str(f))
+        c.reload_dictionary()
+        assert c.dictionary == {"kraxam": "Kragzam", "crag zam": "Kragzam"}
+        f.write_text("foo=Bar\n")
+        c.reload_dictionary()
+        assert c.dictionary == {"foo": "Bar"}
+
+    def test_reload_dictionary_strict_raises_on_bad_entry(self, tmp_path):
+        import pytest
+        from whisper_dictation.config import DictationConfig
+
+        f = tmp_path / "words.txt"
+        f.write_text("nonsense\n")
+        c = DictationConfig(dictionary_path=str(f))
+        with pytest.raises(ValueError):
+            c.reload_dictionary(strict=True)
+
+    def test_ensure_dictionary_file_creates_template(self, tmp_path):
+        from whisper_dictation.config import DictationConfig, ensure_dictionary_file
+
+        path = ensure_dictionary_file(str(tmp_path / "sub" / "d.txt"))
+        assert path.exists()
+        assert DictationConfig.parse_dictionary(path.read_text()) == {}

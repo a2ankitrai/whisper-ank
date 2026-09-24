@@ -18,8 +18,8 @@ def build_config_from_fields(fields: dict, base: DictationConfig) -> DictationCo
     remove_fillers, hotwords (comma-separated string), audio_feedback,
     hotkey (e.g. "cmd+shift"), recording_mode, replay_hotkey (e.g.
     "cmd+shift+v"). `base` supplies fields the settings window doesn't
-    edit (snippets). Raises ValueError, with a message suitable for
-    showing directly in the UI, on an invalid hotkey/replay-hotkey spec.
+    edit (snippets, dictionary_path); the dictionary file is re-read on every call. Raises ValueError, with a message suitable for
+    showing directly in the UI, on an invalid hotkey/replay-hotkey spec or malformed dictionary entry.
     """
     grammar_engine = fields["grammar_engine"]
     language = fields["language"]
@@ -34,9 +34,13 @@ def build_config_from_fields(fields: dict, base: DictationConfig) -> DictationCo
         remove_fillers=fields["remove_fillers"],
         hotwords=[h.strip() for h in fields["hotwords"].split(",") if h.strip()],
         snippets=dict(base.snippets),
+        dictionary_path=base.dictionary_path,
         audio_feedback=fields["audio_feedback"],
         recording_mode=fields["recording_mode"],
     )
-    config.hotkey = DictationConfig._parse_hotkey(fields["hotkey"])
+    config.hotkey, config.hotkey_key = DictationConfig._parse_record_hotkey(
+        fields["hotkey"]
+    )
     config.replay_hotkey = DictationConfig._parse_replay_hotkey(fields["replay_hotkey"])
+    config.reload_dictionary(strict=True)
     return config

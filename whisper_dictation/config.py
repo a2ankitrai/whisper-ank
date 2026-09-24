@@ -5,8 +5,28 @@ from __future__ import annotations
 import argparse
 import sys
 from dataclasses import dataclass, field
+from pathlib import Path
 
-from .keyboard import MODIFIER_FLAG_MASKS
+from .keyboard import KEY_CODES, MODIFIER_FLAG_MASKS
+
+DEFAULT_DICTIONARY_PATH = Path.home() / ".whisper_dictation" / "dictionary.txt"
+
+_DICTIONARY_TEMPLATE = """\
+# Personal dictionary: one heard=correct per line (or comma-separated).
+# Matching ignores case and only replaces whole words. The correct spellings
+# are also passed to Whisper as hotwords. Example:
+# kraxam=Kragzam
+# crag zam=Kragzam
+"""
+
+
+def ensure_dictionary_file(path: str) -> Path:
+    """Create the dictionary file (with a short template) if it doesn't exist."""
+    file = Path(path).expanduser()
+    if not file.exists():
+        file.parent.mkdir(parents=True, exist_ok=True)
+        file.write_text(_DICTIONARY_TEMPLATE)
+    return file
 
 
 @dataclass
@@ -31,6 +51,11 @@ class DictationConfig:
     remove_fillers: bool = True
     hotwords: list[str] = field(default_factory=list)
 
+    # Personal dictionary: mis-heard spelling -> correct word. Loaded from
+    # `dictionary_path` (one heard=correct per line), never stored in config.json.
+    dictionary: dict[str, str] = field(default_factory=dict)
+    dictionary_path: str = str(DEFAULT_DICTIONARY_PATH)
+
     # Snippets (voice shortcuts)
     snippets: dict[str, str] = field(default_factory=dict)
 
@@ -38,7 +63,10 @@ class DictationConfig:
     audio_feedback: bool = True
 
     # Hotkey configuration
-    hotkey: set[str] = field(default_factory=lambda: {"cmd", "shift"})
+    # Modifiers that must be held, plus an optional trailing key (e.g. the
+    # 'd' in alt+d). With no key it is a modifier-only combo like cmd+shift.
+    hotkey: set[str] = field(default_factory=lambda: {"alt"})
+    hotkey_key: str | None = "d"
 
     # "push_to_talk" (hold to record) or "toggle" (press once to start/stop)
     recording_mode: str = "push_to_talk"
@@ -66,12 +94,16 @@ class DictationConfig:
 
         # Parse hotkey
         if args.hotkey:
-            config.hotkey = cls._parse_hotkey(args.hotkey)
+            config.hotkey, config.hotkey_key = cls._parse_record_hotkey(args.hotkey)
 
         # Parse replay hotkey
         replay_hotkey_spec = getattr(args, "replay_hotkey", None)
         if replay_hotkey_spec:
             config.replay_hotkey = cls._parse_replay_hotkey(replay_hotkey_spec)
+
+        if getattr(args, "dictionary_file", None):
+            config.dictionary_path = args.dictionary_file
+        config.reload_dictionary()
 
         # Load snippets from file if provided
         if args.snippets_file:
@@ -94,6 +126,7 @@ class DictationConfig:
             "snippets": dict(self.snippets),
             "audio_feedback": self.audio_feedback,
             "hotkey": sorted(self.hotkey),
+            "hotkey_key": self.hotkey_key,
             "recording_mode": self.recording_mode,
             "replay_hotkey": {"modifiers": sorted(modifiers), "key": key},
         }
@@ -119,6 +152,8 @@ class DictationConfig:
         )
         if "hotkey" in data:
             config.hotkey = set(data["hotkey"])
+            # A saved hotkey predating hotkey_key was modifier-only.
+            config.hotkey_key = data.get("hotkey_key")
         if "replay_hotkey" in data:
             replay = data["replay_hotkey"]
             config.replay_hotkey = (frozenset(replay["modifiers"]), replay["key"])
@@ -143,6 +178,19 @@ class DictationConfig:
                 f"Supported modifiers: {supported}"
             )
         return hotkey
+
+    @classmethod
+    def _parse_record_hotkey(cls, spec: str) -> tuple[set[str], str | None]:
+        """Parse "cmd+shift" or "alt+d" into (modifiers, optional trailing key)."""
+        parts = [part.strip().lower() for part in spec.split("+") if part.strip()]
+        key = None
+        if len(parts) >= 2 and parts[-1] not in MODIFIER_FLAG_MASKS:
+            key = parts.pop()
+            if key not in KEY_CODES:
+                raise ValueError(
+                    f"Unsupported hotkey key '{key}'. Supported: letters and digits"
+                )
+        return cls._parse_hotkey("+".join(parts)), key
 
     @staticmethod
     def _parse_replay_hotkey(spec: str) -> tuple[frozenset[str], str]:
@@ -172,6 +220,58 @@ class DictationConfig:
                 f"Replay hotkey must end with a non-modifier key, got '{key}'"
             )
         return modifiers, key
+
+    @staticmethod
+    def parse_dictionary(text: str) -> dict[str, str]:
+        """Parse "kraxam=Kragzam, craxam=Kragzam" (comma or newline separated)."""
+        entries: dict[str, str] = {}
+        for item in text.replace("\n", ",").split(","):
+            item = item.strip()
+            if not item or item.startswith("#"):
+                continue
+            if "=" not in item:
+                raise ValueError(
+                    f"Dictionary entry '{item}' must look like heard=correct"
+                )
+            heard, correct = (part.strip() for part in item.split("=", 1))
+            if not heard or not correct:
+                raise ValueError(
+                    f"Dictionary entry '{item}' must look like heard=correct"
+                )
+            entries[heard.lower()] = correct
+        return entries
+
+    def reload_dictionary(self, strict: bool = False) -> None:
+        """Re-read `dictionary_path`. A missing default file is not an error.
+
+        strict=True raises ValueError on a malformed entry (so the settings
+        window can show it) instead of warning and using an empty dictionary.
+        """
+        if strict:
+            try:
+                text = Path(self.dictionary_path).expanduser().read_text()
+            except FileNotFoundError:
+                self.dictionary = {}
+                return
+            self.dictionary = self.parse_dictionary(text)
+            return
+        self.dictionary = self._load_dictionary(
+            self.dictionary_path,
+            warn_missing=self.dictionary_path != str(DEFAULT_DICTIONARY_PATH),
+        )
+
+    @classmethod
+    def _load_dictionary(cls, path: str, warn_missing: bool = True) -> dict[str, str]:
+        """Load a dictionary file (one heard=correct per line)."""
+        try:
+            with open(Path(path).expanduser(), "r") as f:
+                return cls.parse_dictionary(f.read())
+        except FileNotFoundError:
+            if warn_missing:
+                print(f"⚠️  Dictionary file not found: {path}", file=sys.stderr)
+        except (OSError, UnicodeDecodeError, ValueError) as e:
+            print(f"⚠️  Could not read dictionary file {path}: {e}", file=sys.stderr)
+        return {}
 
     @staticmethod
     def _load_snippets(path: str) -> dict[str, str]:

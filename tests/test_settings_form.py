@@ -19,7 +19,7 @@ def _base_fields(**overrides) -> dict:
         "remove_fillers": True,
         "hotwords": "",
         "audio_feedback": True,
-        "hotkey": "cmd+shift",
+        "hotkey": "alt+d",
         "recording_mode": "push_to_talk",
         "replay_hotkey": "cmd+shift+v",
     }

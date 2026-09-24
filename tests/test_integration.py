@@ -12,6 +12,14 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 
+def modifier_only_config(**overrides):
+    """Config with the classic modifier-only cmd+shift record hotkey."""
+    from whisper_dictation.config import DictationConfig
+
+    return DictationConfig(hotkey={"cmd", "shift"}, hotkey_key=None, **overrides)
+
+
+
 class TestEndToEndFlow:
     """Test complete dictation flow from recording to typing."""
 
@@ -48,7 +56,7 @@ class TestEndToEndFlow:
         mock_create_event.return_value = mock_event
 
         # Create app
-        app = DictationApp()
+        app = DictationApp(config=modifier_only_config())
 
         # Recording start/stop runs on the app's worker thread
         import threading
@@ -187,7 +195,7 @@ class TestErrorRecovery:
         mock_typer = MagicMock()
         mock_typer_cls.return_value = mock_typer
 
-        app = DictationApp()
+        app = DictationApp(config=modifier_only_config())
 
         # First recording (will fail)
         app._process_recording()
@@ -226,7 +234,7 @@ class TestErrorRecovery:
         mock_typer = MagicMock()
         mock_typer_cls.return_value = mock_typer
 
-        app = DictationApp()
+        app = DictationApp(config=modifier_only_config())
 
         # First recording (will fail)
         try:
@@ -257,7 +265,7 @@ class TestEdgeCases:
         mock_recorder.stop.return_value = None  # Too short
         mock_recorder_cls.return_value = mock_recorder
 
-        app = DictationApp()
+        app = DictationApp(config=modifier_only_config())
 
         # Rapid cycles
         for _ in range(5):
@@ -282,7 +290,7 @@ class TestEdgeCases:
         mock_recorder = MagicMock()
         mock_recorder_cls.return_value = mock_recorder
 
-        app = DictationApp()
+        app = DictationApp(config=modifier_only_config())
 
         # Press all modifiers
         app._on_press(Key.cmd)

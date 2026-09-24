@@ -17,8 +17,18 @@ from .audio_feedback import AudioFeedback
 from .audio_recorder import AudioRecorder
 from .config import DictationConfig
 from .grammar_corrector import create_grammar_corrector
-from .keyboard import _resilient_listener_class, key_to_char, live_modifiers
-from .text_processors import FillerRemover, SnippetExpander, TextProcessor
+from .keyboard import (
+    _resilient_listener_class,
+    key_matches,
+    live_modifiers,
+    make_hotkey_intercept,
+)
+from .text_processors import (
+    FillerRemover,
+    SnippetExpander,
+    TextProcessor,
+    WordCorrector,
+)
 from .text_typer import TextTyper
 from .transcriber import Transcriber
 from .translator import ArgosTranslator, Translator
@@ -58,6 +68,8 @@ class DictationApp:
         self.running = True
         self.pressed_modifiers: set[str] = set()
         self.hotkey = config.hotkey
+        self.hotkey_key = config.hotkey_key
+        self._hotkey_key_down = False
         self.recording_mode = config.recording_mode
         self.replay_hotkey = config.replay_hotkey
         self.history: deque[str] = deque(maxlen=10)
@@ -72,6 +84,12 @@ class DictationApp:
         # granted. Without this, that failure mode is completely silent.
         self.last_event_at: float | None = None
         self._no_events_warned_at: float | None = None
+
+        # Swallows the record hotkey's trailing key so Option+D doesn't also
+        # type '∂' into the focused window.
+        self._intercept = make_hotkey_intercept(
+            lambda: (self.hotkey, self.hotkey_key)
+        )
 
         # Recording start/stop is executed on a dedicated worker thread so the
         # keyboard callbacks stay non-blocking (see _worker_loop).
@@ -97,10 +115,15 @@ class DictationApp:
             language=config.language,
             translate=config.translate_to_english,
             multilingual=config.multilingual,
-            hotwords=config.hotwords,
+            # Correct spellings also bias Whisper toward the right word.
+            hotwords=list(dict.fromkeys([*config.hotwords, *config.dictionary.values()])),
         )
 
         processors: list[TextProcessor] = []
+
+        # 0. Personal dictionary (fix mis-heard words before anything else)
+        if config.dictionary:
+            processors.append(WordCorrector(config.dictionary))
 
         # 1. Filler removal (first, to clean up raw transcription)
         if config.remove_fillers:
@@ -146,6 +169,7 @@ class DictationApp:
         "target_language",
         "remove_fillers",
         "snippets",
+        "dictionary",
     )
 
     def apply_config(self, new_config: DictationConfig) -> None:
@@ -167,6 +191,7 @@ class DictationApp:
 
         with self.lock:
             self.hotkey = new_config.hotkey
+            self.hotkey_key = new_config.hotkey_key
             self.recording_mode = new_config.recording_mode
             self.replay_hotkey = new_config.replay_hotkey
             self.audio_feedback.enabled = new_config.audio_feedback
@@ -266,7 +291,10 @@ class DictationApp:
                 self.pressed_modifiers.add(modifier)
                 now_full = self.hotkey.issubset(self.pressed_modifiers)
 
-                if self.recording_mode == "toggle":
+                if self.hotkey_key:
+                    # Key combo: recording is driven by the trailing key.
+                    pass
+                elif self.recording_mode == "toggle":
                     # Fire once on the rising edge, not on every repeated
                     # press while the combo stays held down.
                     if now_full and not was_full:
@@ -277,18 +305,28 @@ class DictationApp:
                 elif now_full and not self.is_recording:
                     self._start_recording()
         else:
-            # Not a modifier: check it against the replay hotkey's trailing
-            # key (e.g. the 'v' in cmd+shift+v).
-            replay_modifiers, replay_key = self.replay_hotkey
-            char = key_to_char(key)
-            if char == replay_key and replay_modifiers.issubset(self.pressed_modifiers):
-                self.commands.put("replay")
+            if self.hotkey_key and key_matches(key, self.hotkey_key):
+                with self.lock:
+                    if self.hotkey.issubset(self.pressed_modifiers):
+                        # Ignore key auto-repeat while the key stays down.
+                        first_press = not self._hotkey_key_down
+                        self._hotkey_key_down = True
+                        if self.recording_mode == "toggle":
+                            if first_press:
+                                if self.is_recording:
+                                    self._stop_recording()
+                                else:
+                                    self._start_recording()
+                        elif not self.is_recording:
+                            self._start_recording()
 
-        # Escape to quit
-        if key == Key.esc:
-            print("\n👋 Exiting...")
-            self.running = False
-            return False
+            # Check against the replay hotkey's trailing key (e.g. the 'v'
+            # in cmd+shift+v).
+            replay_modifiers, replay_key = self.replay_hotkey
+            if key_matches(key, replay_key) and replay_modifiers.issubset(
+                self.pressed_modifiers
+            ):
+                self.commands.put("replay")
 
     def _on_release(self, key):
         """Handle key release."""
@@ -299,6 +337,9 @@ class DictationApp:
             with self.lock:
                 self.pressed_modifiers.discard(modifier)
 
+                if not self.hotkey.issubset(self.pressed_modifiers):
+                    self._hotkey_key_down = False
+
                 # Push-to-talk only: toggle mode starts/stops on press, not
                 # on release, so recording can continue with no keys held.
                 if (
@@ -306,6 +347,11 @@ class DictationApp:
                     and self.is_recording
                     and not self.hotkey.issubset(self.pressed_modifiers)
                 ):
+                    self._stop_recording()
+        elif self.hotkey_key and key_matches(key, self.hotkey_key):
+            with self.lock:
+                self._hotkey_key_down = False
+                if self.recording_mode == "push_to_talk" and self.is_recording:
                     self._stop_recording()
 
     def _resync_modifiers(self):
@@ -463,7 +509,10 @@ class DictationApp:
 
     def _print_banner(self) -> None:
         """Print the startup banner (hotkeys, active features)."""
-        hotkey_display = "+".join(k.capitalize() for k in sorted(self.hotkey))
+        hotkey_display = "+".join(
+            [k.capitalize() for k in sorted(self.hotkey)]
+            + ([self.hotkey_key.upper()] if self.hotkey_key else [])
+        )
         replay_modifiers, replay_key = self.replay_hotkey
         replay_display = "+".join(
             k.capitalize() for k in sorted(replay_modifiers)
@@ -478,7 +527,7 @@ class DictationApp:
             print(f"Hold {hotkey_display} to record")
             print("Release to transcribe and type")
         print(f"Press {replay_display} to retype the last transcription")
-        print("Press Escape to quit")
+        print("Press Ctrl+C to quit")
         print("-" * 60)
 
         features = []
@@ -502,6 +551,8 @@ class DictationApp:
         if self.config.hotwords:
             features.append(f"Hotwords: {len(self.config.hotwords)}")
 
+        if self.config.dictionary:
+            features.append(f"Dictionary: {len(self.config.dictionary)}")
         if self.config.snippets:
             features.append(f"Snippets: {len(self.config.snippets)}")
 
@@ -543,6 +594,7 @@ class DictationApp:
         self.listener = listener_cls(
             on_press=self._on_press,
             on_release=self._on_release,
+            darwin_intercept=self._intercept,
         )
         self.listener.start()
         self.listener_started_at = time.monotonic()
@@ -567,6 +619,7 @@ class DictationApp:
             self.listener = listener_cls(
                 on_press=self._on_press,
                 on_release=self._on_release,
+                darwin_intercept=self._intercept,
             )
             self.listener.start()
             self.listener_started_at = time.monotonic()

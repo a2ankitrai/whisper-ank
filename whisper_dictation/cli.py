@@ -92,6 +92,14 @@ Examples:
 
     # Snippets
     parser.add_argument(
+        "--dictionary-file",
+        default=None,
+        help=(
+            "Dictionary file (heard=correct per line, e.g. kraxam=Kragzam). "
+            "Default: ~/.whisper_dictation/dictionary.txt"
+        ),
+    )
+    parser.add_argument(
         "--snippets-file",
         default=None,
         help="Path to snippets file (format: trigger=text per line)",
@@ -107,8 +115,11 @@ Examples:
     # Hotkey
     parser.add_argument(
         "--hotkey",
-        default="cmd+shift",
-        help="Hotkey combination (default: cmd+shift). Example: ctrl+shift",
+        default="alt+d",
+        help=(
+            "Hotkey combination (default: alt+d). Modifiers only "
+            "(e.g. ctrl+shift) or modifiers plus a letter/digit (e.g. alt+d)"
+        ),
     )
     parser.add_argument(
         "--recording-mode",
@@ -143,7 +154,11 @@ Examples:
         if _config_flags_passed(sys.argv):
             config = DictationConfig.from_args(args)
         else:
-            config = ConfigStore().load() or DictationConfig.from_args(args)
+            config = ConfigStore().load()
+            if config is None:
+                config = DictationConfig.from_args(args)
+            else:
+                config.reload_dictionary()
     except ValueError as e:
         parser.error(str(e))
 

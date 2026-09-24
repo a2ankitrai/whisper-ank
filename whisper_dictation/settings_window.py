@@ -9,6 +9,7 @@ around it.
 
 from __future__ import annotations
 
+import subprocess
 import threading
 
 import objc
@@ -29,6 +30,7 @@ from AppKit import (
 )
 from PyObjCTools import AppHelper
 
+from .config import ensure_dictionary_file
 from .config_store import ConfigStore
 from .dictation_app import DictationApp
 from .settings_form import build_config_from_fields
@@ -38,7 +40,7 @@ ROW_HEIGHT = 30
 LABEL_WIDTH = 150
 FIELD_X = LABEL_WIDTH + 20
 FIELD_WIDTH = WINDOW_WIDTH - FIELD_X - 20
-NUM_ROWS = 14
+NUM_ROWS = 15
 
 GRAMMAR_ENGINE_CHOICES = ["none", "languagetool", "gramformer"]
 RECORDING_MODE_CHOICES = ["push_to_talk", "toggle"]
@@ -139,12 +141,24 @@ class SettingsWindow(NSObject):
             content, y, "Hotwords", ",".join(config.hotwords)
         )
         y -= ROW_HEIGHT
+        self._add_label(content, y, "Dictionary")
+        dictionary_button = NSButton.alloc().initWithFrame_(
+            NSMakeRect(FIELD_X, y, FIELD_WIDTH, 24)
+        )
+        dictionary_button.setTitle_("Open dictionary file…")
+        dictionary_button.setBezelStyle_(1)
+        dictionary_button.setTarget_(self)
+        dictionary_button.setAction_("openDictionary:")
+        content.addSubview_(dictionary_button)
+        self.dictionary_button = dictionary_button
+        y -= ROW_HEIGHT
         self.audio_feedback_checkbox = self._add_checkbox(
             content, y, "Audio feedback", config.audio_feedback
         )
         y -= ROW_HEIGHT
         self.hotkey_field = self._add_text_field(
-            content, y, "Record hotkey", "+".join(sorted(config.hotkey))
+            content, y, "Record hotkey",
+            "+".join(sorted(config.hotkey) + ([config.hotkey_key] if config.hotkey_key else [])),
         )
         y -= ROW_HEIGHT
         self.recording_mode_popup = self._add_popup(
@@ -226,6 +240,13 @@ class SettingsWindow(NSObject):
             "recording_mode": self.recording_mode_popup.titleOfSelectedItem(),
             "replay_hotkey": self.replay_hotkey_field.stringValue(),
         }
+
+    def openDictionary_(self, _sender):
+        """Open the dictionary file in the default text editor (creating it
+        first if needed). Edits apply the next time Save is pressed."""
+        path = ensure_dictionary_file(self.dictation_app.config.dictionary_path)
+        subprocess.run(["open", "-t", str(path)], check=False)
+        self.status_field.setStringValue_("Edit the file, then press Save to apply")
 
     def save_(self, _sender):
         """PyObjC action method for the Save button (note the trailing `_`,
