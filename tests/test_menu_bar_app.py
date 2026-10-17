@@ -16,9 +16,9 @@ class TestFormatStatusTitle:
     def test_idle_title(self):
         from whisper_dictation.menu_bar_app import format_status_title
 
-        assert format_status_title(False) == "🎙️ Idle"
+        assert format_status_title(False) == "🎙️"
 
     def test_recording_title(self):
         from whisper_dictation.menu_bar_app import format_status_title
 
-        assert format_status_title(True) == "🔴 Recording"
+        assert format_status_title(True) == "🔴"

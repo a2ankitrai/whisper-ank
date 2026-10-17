@@ -13,7 +13,7 @@ POLL_INTERVAL = 0.5
 
 def format_status_title(is_recording: bool) -> str:
     """Menu bar title reflecting whether dictation is currently recording."""
-    return "🔴 Recording" if is_recording else "🎙️ Idle"
+    return "🔴" if is_recording else "🎙️"
 
 
 class MenuBarApp(rumps.App):
@@ -44,9 +44,14 @@ class MenuBarApp(rumps.App):
     def run(self, **kwargs):
         """Start DictationApp's background threads, then take the main thread."""
         self.dictation_app.start_background()
-        from .app_identity import apply_app_identity
+        from .app_identity import apply_app_identity, install_dock_handlers
 
         apply_app_identity()
+        install_dock_handlers(lambda: self._open_settings(None), lambda: self._quit(None))
+        from Foundation import NSUserDefaults
+        d = NSUserDefaults.standardUserDefaults()
+        d.setInteger_forKey_(1, 'NSStatusItem VisibleCC Item-0')
+        d.setDouble_forKey_(300, 'NSStatusItem Preferred Position Item-0')
         rumps.Timer(self._poll, POLL_INTERVAL).start()
         super().run(**kwargs)
 

@@ -20,11 +20,8 @@ fi
 
 [ -x WisperAnk.app/Contents/MacOS/WisperAnk ] || ./build_app.sh
 
-# Run through the app bundle's Python copy so the Dock shows "WisperAnk".
-SITE_PACKAGES="$(./venv/bin/python -c 'import site; print(site.getsitepackages()[0])')"
-export PYTHONPATH="$SITE_PACKAGES:$PWD"
-
-nohup WisperAnk.app/Contents/MacOS/WisperAnk -u dictation.py "$@" > dictation.log 2>&1 &
+# Run through the app bundle so the Dock shows "WisperAnk".
+nohup WisperAnk.app/Contents/MacOS/WisperAnk "$@" > /dev/null 2>&1 &
 echo $! > dictation.pid
 disown
 

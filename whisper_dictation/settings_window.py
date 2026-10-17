@@ -76,6 +76,42 @@ TARGET_LANGUAGE_CHOICES = ["none"] + [
 ]
 
 
+LANGUAGE_NAMES = {
+    "af": "Afrikaans", "am": "Amharic", "ar": "Arabic", "as": "Assamese",
+    "az": "Azerbaijani", "ba": "Bashkir", "be": "Belarusian", "bg": "Bulgarian",
+    "bn": "Bengali", "bo": "Tibetan", "br": "Breton", "bs": "Bosnian",
+    "ca": "Catalan", "cs": "Czech", "cy": "Welsh", "da": "Danish",
+    "de": "German", "el": "Greek", "en": "English", "eo": "Esperanto",
+    "es": "Spanish", "et": "Estonian", "eu": "Basque", "fa": "Persian",
+    "fi": "Finnish", "fo": "Faroese", "fr": "French", "ga": "Irish",
+    "gl": "Galician", "gu": "Gujarati", "ha": "Hausa", "haw": "Hawaiian",
+    "he": "Hebrew", "hi": "Hindi", "hr": "Croatian", "ht": "Haitian Creole",
+    "hu": "Hungarian", "hy": "Armenian", "id": "Indonesian", "is": "Icelandic",
+    "it": "Italian", "ja": "Japanese", "jw": "Javanese", "ka": "Georgian",
+    "kk": "Kazakh", "km": "Khmer", "kn": "Kannada", "ko": "Korean",
+    "la": "Latin", "lb": "Luxembourgish", "ln": "Lingala", "lo": "Lao",
+    "lt": "Lithuanian", "lv": "Latvian", "mg": "Malagasy", "mi": "Maori",
+    "mk": "Macedonian", "ml": "Malayalam", "mn": "Mongolian", "mr": "Marathi",
+    "ms": "Malay", "mt": "Maltese", "my": "Burmese", "nb": "Norwegian Bokmal",
+    "ne": "Nepali", "nl": "Dutch", "nn": "Nynorsk", "no": "Norwegian",
+    "oc": "Occitan", "pa": "Punjabi", "pl": "Polish", "ps": "Pashto",
+    "pt": "Portuguese", "ro": "Romanian", "ru": "Russian", "sa": "Sanskrit",
+    "sd": "Sindhi", "si": "Sinhala", "sk": "Slovak", "sl": "Slovenian",
+    "sn": "Shona", "so": "Somali", "sq": "Albanian", "sr": "Serbian",
+    "su": "Sundanese", "sv": "Swedish", "sw": "Swahili", "ta": "Tamil",
+    "te": "Telugu", "tg": "Tajik", "th": "Thai", "tk": "Turkmen",
+    "tl": "Tagalog", "tr": "Turkish", "tt": "Tatar", "uk": "Ukrainian",
+    "ur": "Urdu", "uz": "Uzbek", "vi": "Vietnamese", "yi": "Yiddish",
+    "yo": "Yoruba", "yue": "Cantonese", "zh": "Chinese", "zt": "Chinese (Traditional)",
+}
+SPECIAL_NAMES = {"auto": "Auto-detect", "none": "None"}
+
+
+def display_name(code: str) -> str:
+    """Full language name shown in a popup for a language code."""
+    return SPECIAL_NAMES.get(code) or LANGUAGE_NAMES.get(code, code)
+
+
 class SettingsWindow(NSObject):
     """Owns the NSWindow and its controls for editing a DictationConfig."""
 
@@ -112,7 +148,8 @@ class SettingsWindow(NSObject):
         )
         y -= ROW_HEIGHT
         self.language_popup = self._add_popup(
-            content, y, "Language", LANGUAGE_CHOICES, config.language or "auto"
+            content, y, "Language", LANGUAGE_CHOICES, config.language or "auto",
+            names=True,
         )
         y -= ROW_HEIGHT
         self.multilingual_checkbox = self._add_checkbox(
@@ -125,7 +162,7 @@ class SettingsWindow(NSObject):
         y -= ROW_HEIGHT
         self.target_language_popup = self._add_popup(
             content, y, "Target language", TARGET_LANGUAGE_CHOICES,
-            config.target_language or "none",
+            config.target_language or "none", names=True,
         )
         y -= ROW_HEIGHT
         self.grammar_engine_popup = self._add_popup(
@@ -214,24 +251,34 @@ class SettingsWindow(NSObject):
         content.addSubview_(checkbox)
         return checkbox
 
-    def _add_popup(self, content, y, label_text, choices, selected):
+    def _add_popup(self, content, y, label_text, choices, selected, names=False):
         self._add_label(content, y, label_text)
         popup = NSPopUpButton.alloc().initWithFrame_pullsDown_(
             NSMakeRect(FIELD_X, y, FIELD_WIDTH, 22), False
         )
-        popup.addItemsWithTitles_(choices)
+        if names:
+            # Show full names; keep the code as the item's representedObject.
+            for code in choices:
+                popup.addItemWithTitle_(display_name(code))
+                popup.lastItem().setRepresentedObject_(code)
+        else:
+            popup.addItemsWithTitles_(choices)
         if selected in choices:
-            popup.selectItemWithTitle_(selected)
+            popup.selectItemAtIndex_(choices.index(selected))
         content.addSubview_(popup)
         return popup
+
+    @staticmethod
+    def _code(popup) -> str:
+        return popup.selectedItem().representedObject() or popup.titleOfSelectedItem()
 
     def _read_fields(self) -> dict:
         return {
             "model_size": self.model_size_popup.titleOfSelectedItem(),
-            "language": self.language_popup.titleOfSelectedItem(),
+            "language": self._code(self.language_popup),
             "grammar_engine": self.grammar_engine_popup.titleOfSelectedItem(),
             "translate_to_english": bool(self.translate_checkbox.state()),
-            "target_language": self.target_language_popup.titleOfSelectedItem(),
+            "target_language": self._code(self.target_language_popup),
             "multilingual": bool(self.multilingual_checkbox.state()),
             "remove_fillers": bool(self.remove_fillers_checkbox.state()),
             "hotwords": self.hotwords_field.stringValue(),
