@@ -1,4 +1,4 @@
-# Whisper Dictation
+# Whisper Ank
 
 A local speech-to-text dictation application that types transcribed text directly into any focused application on macOS. No cloud services, no API keys — everything runs locally on your machine.
 
@@ -634,5 +634,5 @@ MIT License — See LICENSE file for details.
 ---
 
 <p align="center">
-  Made with ❤️ by Ankit & copilot.
+  Made with ❤️ by Ankit & AI
 </p>
